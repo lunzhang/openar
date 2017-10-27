@@ -2,5 +2,37 @@
 <html>
 <head>
   <title>Basic Setup</title>
+  <style>
+  html, body {
+    margin: 0;
+  }
+  </style>
 </head>
+<body>
+  <script src="../three.js"></script>
+  <script src="../../dist/openar.js"></script>
+  <script>
+  const camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 1000 );
+  camera.position.z = 1;
+
+  const scene = new THREE.Scene();
+
+  const renderer = new THREE.WebGLRenderer();
+
+  renderer.setPixelRatio( window.devicePixelRatio );
+  renderer.setSize( window.innerWidth, window.innerHeight );
+
+  document.body.appendChild( renderer.domElement );
+
+  const openar = new OpenAR(scene);
+  openar.init();
+
+  animate();
+
+  function animate() {
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+  }
+  </script>
+</body>
 </html>
