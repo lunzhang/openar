@@ -1,6 +1,8 @@
 export default class OpenAR {
   constructor(renderer) {
     this.renderer = renderer;
+    this.renderer.autoClear = false;
+    
     this.scene = new THREE.Scene();
     this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1);
     this.camera.position.z = 1;
@@ -39,7 +41,9 @@ export default class OpenAR {
   }
 
   update() {
+    this.renderer.clear();
     this.renderer.render(this.scene, this.camera);
+    this.renderer.clearDepth();
   }
 
   resize() {

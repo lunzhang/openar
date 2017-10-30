@@ -22,6 +22,14 @@
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight );
 
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 1000 );
+  camera.position.z = 2;
+
+  var geometry = new THREE.BoxGeometry(1, 1, 1);
+  var cube = new THREE.Mesh(geometry);
+  scene.add(cube);
+
   document.body.appendChild(renderer.domElement);
 
   const openar = new OpenAR(renderer);
@@ -32,7 +40,7 @@
 
   function animate() {
     openar.update();
-
+    renderer.render(scene, camera);
     requestAnimationFrame(animate);
   }
 
