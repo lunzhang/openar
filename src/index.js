@@ -1,6 +1,10 @@
 export default class OpenAR {
-  constructor(scene) {
-    this.scene = scene;
+  constructor(renderer) {
+    this.renderer = renderer;
+    this.scene = new THREE.Scene();
+    this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1);
+    this.camera.position.z = 1;
+
     this.init();
   }
 
@@ -32,6 +36,15 @@ export default class OpenAR {
     this.screen = new THREE.Sprite(material);
     this.screen.scale.set(2, 2);
     this.scene.add(this.screen);
+  }
+
+  update() {
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  resize() {
+    this.camera.aspect = window.innerWidth / window.innerHeight;
+    this.camera.updateProjectionMatrix();
   }
 }
 

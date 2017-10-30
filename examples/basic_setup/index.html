@@ -17,11 +17,6 @@
   <script src="../three.js"></script>
   <script src="../../dist/openar.js"></script>
   <script>
-  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1);
-  camera.position.z = 1;
-
-  const scene = new THREE.Scene();
-
   const renderer = new THREE.WebGLRenderer();
 
   renderer.setPixelRatio(window.devicePixelRatio);
@@ -29,20 +24,20 @@
 
   document.body.appendChild(renderer.domElement);
 
-  const openar = new OpenAR(scene);
+  const openar = new OpenAR(renderer);
 
   window.addEventListener('resize', onWindowResize, false);
 
   animate();
 
   function animate() {
+    openar.update();
+
     requestAnimationFrame(animate);
-    renderer.render(scene, camera);
   }
 
   function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
+    openar.resize();
     renderer.setSize(window.innerWidth, window.innerHeight);
   }
   </script>
