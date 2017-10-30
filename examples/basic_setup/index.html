@@ -6,32 +6,44 @@
   html, body {
     margin: 0;
   }
+
+  canvas {
+    width: 100%;
+    display: block;
+  }
   </style>
 </head>
 <body>
   <script src="../three.js"></script>
   <script src="../../dist/openar.js"></script>
   <script>
-  const camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 1000 );
+  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1);
   camera.position.z = 1;
 
   const scene = new THREE.Scene();
 
   const renderer = new THREE.WebGLRenderer();
 
-  renderer.setPixelRatio( window.devicePixelRatio );
-  renderer.setSize( window.innerWidth, window.innerHeight );
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight );
 
-  document.body.appendChild( renderer.domElement );
+  document.body.appendChild(renderer.domElement);
 
   const openar = new OpenAR(scene);
-  openar.init();
+
+  window.addEventListener('resize', onWindowResize, false);
 
   animate();
 
   function animate() {
     requestAnimationFrame(animate);
     renderer.render(scene, camera);
+  }
+
+  function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
   }
   </script>
 </body>
