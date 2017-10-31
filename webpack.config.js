@@ -19,7 +19,7 @@ module.exports = [{
   },
   devServer: {
     publicPath: '/dist',
-    contentBase: [path.join(__dirname, "examples")],
+    contentBase: [path.join(__dirname, "docs")],
     inline: true,
     port: 8080
   },
