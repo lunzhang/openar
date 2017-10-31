@@ -125,7 +125,7 @@ var OpenAR = function () {
 
       // get user camera and attach to video element
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        navigator.mediaDevices.getUserMedia({ video: true }).then(function (stream) {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (stream) {
           _this.video.src = window.URL.createObjectURL(stream);
         });
       }
@@ -147,7 +147,7 @@ var OpenAR = function () {
   }, {
     key: 'initListeners',
     value: function initListeners() {
-      window.addEventListener('deviceorientation', this.handleOrientation);
+      window.addEventListener('deviceorientation', this.handleOrientation.bind(this));
     }
 
     // keep virutal world camera sync with real world

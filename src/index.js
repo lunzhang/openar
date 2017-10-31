@@ -27,7 +27,7 @@ export default class OpenAR {
 
     // get user camera and attach to video element
     if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+      navigator.mediaDevices.getUserMedia({video: { facingMode: "environment" }}).then((stream) => {
         this.video.src = window.URL.createObjectURL(stream);
       });
     }
@@ -48,7 +48,7 @@ export default class OpenAR {
   }
 
   initListeners() {
-    window.addEventListener('deviceorientation', this.handleOrientation);
+    window.addEventListener('deviceorientation', this.handleOrientation.bind(this));
   }
 
   // keep virutal world camera sync with real world
