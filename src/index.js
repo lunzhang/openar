@@ -27,7 +27,7 @@ export default class OpenAR {
 
     // get user camera and attach to video element
     if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      navigator.mediaDevices.getUserMedia({video: { facingMode: "environment" }}).then((stream) => {
+      navigator.mediaDevices.getUserMedia({video: { facingMode: "environment" } }).then((stream) => {
         this.video.src = window.URL.createObjectURL(stream);
       });
     }
