@@ -17,7 +17,7 @@ export default class OpenAR {
     this.init();
     this.initListeners();
   }
-  
+
   /**
   * Get user camera using video
   * Add video texture to scene
@@ -32,15 +32,15 @@ export default class OpenAR {
       });
     }
 
-    // this.videoTexture = new THREE.VideoTexture(this.video);
-    // this.videoTexture.minFilter = THREE.LinearFilter;
-    // this.videoTexture.magFilter = THREE.LinearFilter;
-    //
-    // const material = new THREE.SpriteMaterial({ map: this.videoTexture });
+    this.videoTexture = new THREE.VideoTexture(this.video);
+    this.videoTexture.minFilter = THREE.LinearFilter;
+    this.videoTexture.magFilter = THREE.LinearFilter;
+
+    const material = new THREE.SpriteMaterial({ map: this.videoTexture });
 
     // testing without webcam
-    var map = new THREE.TextureLoader().load( "./pulpitrock.jpg" );
-    var material = new THREE.SpriteMaterial({ map: map });
+    // var map = new THREE.TextureLoader().load( "./pulpitrock.jpg" );
+    // var material = new THREE.SpriteMaterial({ map: map });
 
     this.screen = new THREE.Sprite(material);
     this.screen.scale.set(2, 2);
