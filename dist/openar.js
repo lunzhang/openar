@@ -101,6 +101,7 @@ var OpenAR = function () {
     this.renderer.autoClear = false;
 
     this.sceneCamera = camera;
+    this.cameraOrientation = null;
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1);
@@ -160,9 +161,26 @@ var OpenAR = function () {
       var gamma = e.gamma * Math.PI / 180;
       var alpha = e.alpha * Math.PI / 180;
 
-      this.sceneCamera.rotation.x = beta;
-      this.sceneCamera.rotation.y = gamma;
-      this.sceneCamera.rotation.z = alpha;
+      if (this.cameraOrientation !== null) {
+        // get difference in orientation since last update
+        var diffX = beta - this.cameraOrientation.x;
+        var diffY = gamma - this.cameraOrientation.y;
+        var diffZ = alpha - this.cameraOrientation.z;
+
+        this.sceneCamera.rotation.x += diffX;
+        this.sceneCamera.rotation.y += diffY;
+        this.sceneCamera.rotation.z += diffZ;
+
+        this.cameraOrientation.x = beta;
+        this.cameraOrientation.y = gamma;
+        this.cameraOrientation.z = alpha;
+      } else {
+        this.cameraOrientation = {
+          x: beta,
+          y: gamma,
+          z: alpha
+        };
+      }
     }
 
     // Clear renderer before and after rendering camera
