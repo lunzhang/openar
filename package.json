@@ -6,7 +6,9 @@
   "directories": {},
   "scripts": {
     "dev": "webpack-dev-server --https ",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "./node_modules/.bin/eslint ./src",
+    "build": "webpack && node build.js"
   },
   "keywords": [
     "webar"
