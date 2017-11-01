@@ -81,7 +81,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /* WEBPACK VAR INJECTION */(function(global) {
 
 Object.defineProperty(exports, "__esModule", {
-  value: true
+    value: true
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -94,112 +94,112 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 * Add camera view to scene as a sprite
 **/
 var OpenAR = function () {
-  function OpenAR(renderer, camera) {
-    _classCallCheck(this, OpenAR);
+    function OpenAR(renderer, camera) {
+        _classCallCheck(this, OpenAR);
 
-    this.renderer = renderer;
-    this.renderer.autoClear = false;
+        this.renderer = renderer;
+        this.renderer.autoClear = false;
 
-    this.sceneCamera = camera;
-    this.cameraOrientation = null;
-    this.cameraMotion = null;
+        this.sceneCamera = camera;
+        this.cameraOrientation = null;
+        this.cameraMotion = null;
 
-    this.scene = new THREE.Scene();
-    this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1);
-    this.camera.position.z = 1;
+        this.scene = new THREE.Scene();
+        this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1);
+        this.camera.position.z = 1;
 
-    this.init();
-    this.initListeners();
-  }
-
-  /**
-  * Get user camera using video
-  * Add video texture to scene
-  **/
-
-
-  _createClass(OpenAR, [{
-    key: 'init',
-    value: function init() {
-      var _this = this;
-
-      this.video = document.createElement('video');
-
-      // get user camera and attach to video element
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (stream) {
-          _this.video.src = window.URL.createObjectURL(stream);
-        });
-      }
-
-      this.videoTexture = new THREE.VideoTexture(this.video);
-      this.videoTexture.minFilter = THREE.LinearFilter;
-      this.videoTexture.magFilter = THREE.LinearFilter;
-
-      var material = new THREE.SpriteMaterial({ map: this.videoTexture });
-
-      // testing without webcam
-      // var map = new THREE.TextureLoader().load( "./pulpitrock.jpg" );
-      // var material = new THREE.SpriteMaterial({ map: map });
-
-      this.screen = new THREE.Sprite(material);
-      this.screen.scale.set(2, 2);
-      this.scene.add(this.screen);
-    }
-  }, {
-    key: 'initListeners',
-    value: function initListeners() {
-      window.addEventListener('deviceorientation', this.handleOrientation.bind(this));
-      window.addEventListener('devicemotion', this.handleMotion.bind(this));
+        this.init();
+        this.initListeners();
     }
 
-    // keep virutal world rotation in sync with real world
+    /**
+    * Get user camera using video
+    * Add video texture to scene
+    **/
 
-  }, {
-    key: 'handleOrientation',
-    value: function handleOrientation(e) {
-      if (this.cameraOrientation !== null) {
-        // convert value from degree to radians
-        var beta = e.beta * Math.PI / 180;
-        var gamma = e.gamma * Math.PI / 180;
 
-        // get difference in orientation since last update
-        var diffX = beta - this.cameraOrientation.beta;
-        var diffY = gamma - this.cameraOrientation.gamma;
+    _createClass(OpenAR, [{
+        key: 'init',
+        value: function init() {
+            var _this = this;
 
-        this.sceneCamera.rotation.x += diffX;
-        this.sceneCamera.rotation.y += diffY;
-      }
+            this.video = document.createElement('video');
 
-      this.cameraOrientation = e;
-    }
+            // get user camera and attach to video element
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (stream) {
+                    _this.video.src = window.URL.createObjectURL(stream);
+                });
+            }
 
-    // keep virtual world position in sync with real world
+            this.videoTexture = new THREE.VideoTexture(this.video);
+            this.videoTexture.minFilter = THREE.LinearFilter;
+            this.videoTexture.magFilter = THREE.LinearFilter;
 
-  }, {
-    key: 'handleMotions',
-    value: function handleMotions(e) {
-      if (this.cameraMotion !== null) {
-        this.camera.translateX(e.acceleration.x);
-        this.camera.translateY(e.acceleration.y);
-        this.camera.translateZ(e.acceleration.z);
-      }
+            var material = new THREE.SpriteMaterial({ map: this.videoTexture });
 
-      this.cameraMotion = e;
-    }
+            // testing without webcam
+            // var map = new THREE.TextureLoader().load( "./pulpitrock.jpg" );
+            // var material = new THREE.SpriteMaterial({ map: map });
 
-    // Clear renderer before and after rendering camera
+            this.screen = new THREE.Sprite(material);
+            this.screen.scale.set(2, 2);
+            this.scene.add(this.screen);
+        }
+    }, {
+        key: 'initListeners',
+        value: function initListeners() {
+            window.addEventListener('deviceorientation', this.handleOrientation.bind(this));
+            window.addEventListener('devicemotion', this.handleMotion.bind(this));
+        }
 
-  }, {
-    key: 'update',
-    value: function update() {
-      this.renderer.clear();
-      this.renderer.render(this.scene, this.camera);
-      this.renderer.clearDepth();
-    }
-  }]);
+        // keep virutal world rotation in sync with real world
 
-  return OpenAR;
+    }, {
+        key: 'handleOrientation',
+        value: function handleOrientation(e) {
+            if (this.cameraOrientation !== null) {
+                // convert value from degree to radians
+                var beta = e.beta * Math.PI / 180;
+                var gamma = e.gamma * Math.PI / 180;
+
+                // get difference in orientation since last update
+                var diffX = beta - this.cameraOrientation.beta;
+                var diffY = gamma - this.cameraOrientation.gamma;
+
+                this.sceneCamera.rotation.x += diffX;
+                this.sceneCamera.rotation.y += diffY;
+            }
+
+            this.cameraOrientation = e;
+        }
+
+        // keep virtual world position in sync with real world
+
+    }, {
+        key: 'handleMotion',
+        value: function handleMotion(e) {
+            if (this.cameraMotion !== null) {
+                this.camera.translateX(e.acceleration.x);
+                this.camera.translateY(e.acceleration.y);
+                this.camera.translateZ(e.acceleration.z);
+            }
+
+            this.cameraMotion = e;
+        }
+
+        // Clear renderer before and after rendering camera
+
+    }, {
+        key: 'update',
+        value: function update() {
+            this.renderer.clear();
+            this.renderer.render(this.scene, this.camera);
+            this.renderer.clearDepth();
+        }
+    }]);
+
+    return OpenAR;
 }();
 
 exports.default = OpenAR;
