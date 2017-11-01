@@ -102,6 +102,7 @@ var OpenAR = function () {
 
     this.sceneCamera = camera;
     this.cameraOrientation = null;
+    this.cameraMotion = null;
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1);
@@ -149,38 +150,42 @@ var OpenAR = function () {
     key: 'initListeners',
     value: function initListeners() {
       window.addEventListener('deviceorientation', this.handleOrientation.bind(this));
+      window.addEventListener('devicemotion', this.handleMotion.bind(this));
     }
 
-    // keep virutal world camera sync with real world
+    // keep virutal world rotation in sync with real world
 
   }, {
     key: 'handleOrientation',
     value: function handleOrientation(e) {
-      // convert value from degree to radians
-      var beta = e.beta * Math.PI / 180;
-      var gamma = e.gamma * Math.PI / 180;
-      var alpha = e.alpha * Math.PI / 180;
-
       if (this.cameraOrientation !== null) {
+        // convert value from degree to radians
+        var beta = e.beta * Math.PI / 180;
+        var gamma = e.gamma * Math.PI / 180;
+
         // get difference in orientation since last update
-        var diffX = beta - this.cameraOrientation.x;
-        var diffY = gamma - this.cameraOrientation.y;
-        var diffZ = alpha - this.cameraOrientation.z;
+        var diffX = beta - this.cameraOrientation.beta;
+        var diffY = gamma - this.cameraOrientation.gamma;
 
         this.sceneCamera.rotation.x += diffX;
         this.sceneCamera.rotation.y += diffY;
-        this.sceneCamera.rotation.z += diffZ;
-
-        this.cameraOrientation.x = beta;
-        this.cameraOrientation.y = gamma;
-        this.cameraOrientation.z = alpha;
-      } else {
-        this.cameraOrientation = {
-          x: beta,
-          y: gamma,
-          z: alpha
-        };
       }
+
+      this.cameraOrientation = e;
+    }
+
+    // keep virtual world position in sync with real world
+
+  }, {
+    key: 'handleMotions',
+    value: function handleMotions(e) {
+      if (this.cameraMotion !== null) {
+        this.camera.translateX(e.acceleration.x);
+        this.camera.translateY(e.acceleration.y);
+        this.camera.translateZ(e.acceleration.z);
+      }
+
+      this.cameraMotion = e;
     }
 
     // Clear renderer before and after rendering camera
