@@ -57,13 +57,10 @@ export default class ARView {
     // keep virutal world rotation in sync with real world
     handleOrientation(e) {
         if(this.cameraOrientation !== null) {
-            // convert value from degree to radians
-            let beta = e.beta * Math.PI / 180;
-            let gamma = e.gamma * Math.PI / 180;
-
             // get difference in orientation since last update
-            let diffX = beta - this.cameraOrientation.beta;
-            let diffY = gamma - this.cameraOrientation.gamma;
+            // convert to radians
+            let diffX = (e.beta - this.cameraOrientation.beta) * Math.PI / 180;
+            let diffY = (e.gamma - this.cameraOrientation.gamma) * Math.PI / 180;
 
             this.sceneCamera.rotation.x += diffX;
             this.sceneCamera.rotation.y += diffY;
@@ -75,9 +72,9 @@ export default class ARView {
     // keep virtual world position in sync with real world
     handleMotion(e) {
         if(this.cameraMotion !== null) {
-            this.camera.translateX(e.acceleration.x);
-            this.camera.translateY(e.acceleration.y);
-            this.camera.translateZ(e.acceleration.z);
+            this.camera.translateX(Math.round(e.acceleration.x) / 100);
+            this.camera.translateY(Math.round(e.acceleration.y) / 100);
+            this.camera.translateZ(Math.round(e.acceleration.z) / 100);
         }
 
         this.cameraMotion = e;

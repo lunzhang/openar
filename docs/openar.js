@@ -216,13 +216,10 @@ var ARView = function () {
         key: 'handleOrientation',
         value: function handleOrientation(e) {
             if (this.cameraOrientation !== null) {
-                // convert value from degree to radians
-                var beta = e.beta * Math.PI / 180;
-                var gamma = e.gamma * Math.PI / 180;
-
                 // get difference in orientation since last update
-                var diffX = beta - this.cameraOrientation.beta;
-                var diffY = gamma - this.cameraOrientation.gamma;
+                // convert to radians
+                var diffX = (e.beta - this.cameraOrientation.beta) * Math.PI / 180;
+                var diffY = (e.gamma - this.cameraOrientation.gamma) * Math.PI / 180;
 
                 this.sceneCamera.rotation.x += diffX;
                 this.sceneCamera.rotation.y += diffY;
@@ -237,9 +234,9 @@ var ARView = function () {
         key: 'handleMotion',
         value: function handleMotion(e) {
             if (this.cameraMotion !== null) {
-                this.camera.translateX(e.acceleration.x);
-                this.camera.translateY(e.acceleration.y);
-                this.camera.translateZ(e.acceleration.z);
+                this.camera.translateX(Math.round(e.acceleration.x) / 100);
+                this.camera.translateY(Math.round(e.acceleration.y) / 100);
+                this.camera.translateZ(Math.round(e.acceleration.z) / 100);
             }
 
             this.cameraMotion = e;
@@ -305,9 +302,9 @@ var ARDebugger = function () {
             this.debugWindow.innerHTML = 'alpha: ' + this.arView.cameraOrientation.alpha + '\n';
             this.debugWindow.innerHTML += 'beta: ' + this.arView.cameraOrientation.beta + '\n';
             this.debugWindow.innerHTML += 'gamma: ' + this.arView.cameraOrientation.gamma + '\n';
-            this.debugWindow.innerHTML += 'acceleration.x: ' + this.arView.cameraMotion.acceleration.x + '\n';
-            this.debugWindow.innerHTML += 'acceleration.y: ' + this.arView.cameraMotion.acceleration.y + '\n';
-            this.debugWindow.innerHTML += 'acceleration.z: ' + this.arView.cameraMotion.acceleration.z + '\n';
+            this.debugWindow.innerHTML += 'acceleration.x: ' + Math.round(this.arView.cameraMotion.acceleration.x) + '\n';
+            this.debugWindow.innerHTML += 'acceleration.y: ' + Math.round(this.arView.cameraMotion.acceleration.y) + '\n';
+            this.debugWindow.innerHTML += 'acceleration.z: ' + Math.round(this.arView.cameraMotion.acceleration.z) + '\n';
         }
     }]);
 
