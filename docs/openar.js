@@ -301,6 +301,7 @@ var ARDebugger = function () {
     }, {
         key: 'update',
         value: function update() {
+            if (this.arView.cameraOrientation === null || this.arView.cameraMotion === null) return;
             this.debugWindow.innerHTML = 'alpha: ' + this.arView.cameraOrientation.alpha + '\n';
             this.debugWindow.innerHTML += 'beta: ' + this.arView.cameraOrientation.beta + '\n';
             this.debugWindow.innerHTML += 'gamma: ' + this.arView.cameraOrientation.gamma + '\n';
