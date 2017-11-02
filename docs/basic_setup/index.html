@@ -33,15 +33,17 @@
 
   document.body.appendChild(renderer.domElement);
 
-  const openar = new OpenAR(renderer, camera);
+  const arView = new ARView(renderer, camera);
+  const arDebugger = new ARDebugger(arView);
 
   window.addEventListener('resize', onWindowResize, false);
 
   animate();
 
   function animate() {
-    openar.update();
+    arView.update();
     renderer.render(scene, camera);
+    arDebugger.update();
     requestAnimationFrame(animate);
   }
 

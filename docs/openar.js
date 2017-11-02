@@ -84,6 +84,63 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
+var _ARView = __webpack_require__(2);
+
+var _ARView2 = _interopRequireDefault(_ARView);
+
+var _ARDebugger = __webpack_require__(3);
+
+var _ARDebugger2 = _interopRequireDefault(_ARDebugger);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+global.ARView = _ARView2.default;
+global.ARDebugger = _ARDebugger2.default;
+
+exports.default = {
+    ARView: _ARView2.default,
+    ARDebugger: _ARDebugger2.default
+};
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(1)))
+
+/***/ }),
+/* 1 */
+/***/ (function(module, exports) {
+
+var g;
+
+// This works in non-strict mode
+g = (function() {
+	return this;
+})();
+
+try {
+	// This works if eval is allowed (see CSP)
+	g = g || Function("return this")() || (1,eval)("this");
+} catch(e) {
+	// This works if the window reference is available
+	if(typeof window === "object")
+		g = window;
+}
+
+// g can still be undefined, but nothing to do about it...
+// We return undefined, instead of nothing here, so it's
+// easier to handle this case. if(!global) { ...}
+
+module.exports = g;
+
+
+/***/ }),
+/* 2 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -93,9 +150,9 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 * Gets camera using video element
 * Add camera view to scene as a sprite
 **/
-var OpenAR = function () {
-    function OpenAR(renderer, camera) {
-        _classCallCheck(this, OpenAR);
+var ARView = function () {
+    function ARView(renderer, camera) {
+        _classCallCheck(this, ARView);
 
         this.renderer = renderer;
         this.renderer.autoClear = false;
@@ -118,7 +175,7 @@ var OpenAR = function () {
     **/
 
 
-    _createClass(OpenAR, [{
+    _createClass(ARView, [{
         key: 'init',
         value: function init() {
             var _this = this;
@@ -199,41 +256,64 @@ var OpenAR = function () {
         }
     }]);
 
-    return OpenAR;
+    return ARView;
 }();
 
-exports.default = OpenAR;
-
-
-global.OpenAR = OpenAR;
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(1)))
+exports.default = ARView;
 
 /***/ }),
-/* 1 */
-/***/ (function(module, exports) {
+/* 3 */
+/***/ (function(module, exports, __webpack_require__) {
 
-var g;
+"use strict";
 
-// This works in non-strict mode
-g = (function() {
-	return this;
-})();
 
-try {
-	// This works if eval is allowed (see CSP)
-	g = g || Function("return this")() || (1,eval)("this");
-} catch(e) {
-	// This works if the window reference is available
-	if(typeof window === "object")
-		g = window;
-}
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
 
-// g can still be undefined, but nothing to do about it...
-// We return undefined, instead of nothing here, so it's
-// easier to handle this case. if(!global) { ...}
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-module.exports = g;
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+var ARDebugger = function () {
+    function ARDebugger(arView) {
+        _classCallCheck(this, ARDebugger);
+
+        this.arView = arView;
+        this.init();
+    }
+
+    _createClass(ARDebugger, [{
+        key: 'init',
+        value: function init() {
+            this.debugWindow = document.createElement('div');
+            this.debugWindow.id = 'debug-window';
+            this.debugWindow.style.position = 'fixed';
+            this.debugWindow.style.bottom = '0px';
+            this.debugWindow.style.left = '0px';
+            this.debugWindow.style.color = 'white';
+            this.debugWindow.style.backgroundColor = 'black';
+            this.debugWindow.style.whiteSpace = 'pre';
+            this.debugWindow.style.padding = '10px';
+            document.body.append(this.debugWindow);
+        }
+    }, {
+        key: 'update',
+        value: function update() {
+            this.debugWindow.innerHTML = 'alpha: ' + this.arView.cameraOrientation.alpha + '\n';
+            this.debugWindow.innerHTML += 'beta: ' + this.arView.cameraOrientation.beta + '\n';
+            this.debugWindow.innerHTML += 'gamma: ' + this.arView.cameraOrientation.gamma + '\n';
+            this.debugWindow.innerHTML += 'acceleration.x: ' + this.arView.cameraMotion.acceleration.x + '\n';
+            this.debugWindow.innerHTML += 'acceleration.y: ' + this.arView.cameraMotion.acceleration.y + '\n';
+            this.debugWindow.innerHTML += 'acceleration.z: ' + this.arView.cameraMotion.acceleration.z + '\n';
+        }
+    }]);
+
+    return ARDebugger;
+}();
+
+exports.default = ARDebugger;
 
 /***/ })
 /******/ ]);
