@@ -311,6 +311,13 @@ var ARDebugger = function () {
             this.debugWindow.innerHTML += 'acceleration.x: ' + this.arView.cameraMotion.acceleration.x + '\n';
             this.debugWindow.innerHTML += 'acceleration.y: ' + this.arView.cameraMotion.acceleration.y + '\n';
             this.debugWindow.innerHTML += 'acceleration.z: ' + this.arView.cameraMotion.acceleration.z + '\n';
+
+            this.debugWindow.innerHTML += 'camera.rotation.x: ' + this.arView.sceneCamera.rotation.x + '\n';
+            this.debugWindow.innerHTML += 'camera.rotation.y: ' + this.arView.sceneCamera.rotation.y + '\n';
+            this.debugWindow.innerHTML += 'camera.rotation.z: ' + this.arView.sceneCamera.rotation.z + '\n';
+            this.debugWindow.innerHTML += 'camera.position.x: ' + this.arView.sceneCamera.position.x + '\n';
+            this.debugWindow.innerHTML += 'camera.position.y: ' + this.arView.sceneCamera.position.y + '\n';
+            this.debugWindow.innerHTML += 'camera.position.z: ' + this.arView.sceneCamera.position.z + '\n';
         }
     }]);
 
