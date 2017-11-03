@@ -11,7 +11,7 @@ export default class ARDebugger {
         this.debugWindow.style.bottom = '0px';
         this.debugWindow.style.left = '0px';
         this.debugWindow.style.color = 'white';
-        this.debugWindow.style.backgroundColor = 'black';
+        this.debugWindow.style.backgroundColor = 'transparent';
         this.debugWindow.style.whiteSpace = 'pre';
         this.debugWindow.style.padding = '10px';
         document.body.append(this.debugWindow);
@@ -22,8 +22,8 @@ export default class ARDebugger {
         this.debugWindow.innerHTML = 'alpha: ' + this.arView.cameraOrientation.alpha + '\n';
         this.debugWindow.innerHTML += 'beta: ' + this.arView.cameraOrientation.beta + '\n';
         this.debugWindow.innerHTML += 'gamma: ' + this.arView.cameraOrientation.gamma + '\n';
-        this.debugWindow.innerHTML += 'acceleration.x: ' + Math.round(this.arView.cameraMotion.acceleration.x) + '\n';
-        this.debugWindow.innerHTML += 'acceleration.y: ' + Math.round(this.arView.cameraMotion.acceleration.y) + '\n';
-        this.debugWindow.innerHTML += 'acceleration.z: ' + Math.round(this.arView.cameraMotion.acceleration.z) + '\n';
+        this.debugWindow.innerHTML += 'acceleration.x: ' + this.arView.cameraMotion.acceleration.x + '\n';
+        this.debugWindow.innerHTML += 'acceleration.y: ' + this.arView.cameraMotion.acceleration.y + '\n';
+        this.debugWindow.innerHTML += 'acceleration.z: ' + this.arView.cameraMotion.acceleration.z + '\n';
     }
 }

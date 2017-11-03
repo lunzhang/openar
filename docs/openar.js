@@ -217,12 +217,18 @@ var ARView = function () {
         value: function handleOrientation(e) {
             if (this.cameraOrientation !== null) {
                 // get difference in orientation since last update
-                // convert to radians
-                var diffX = (e.beta - this.cameraOrientation.beta) * Math.PI / 180;
-                var diffY = (e.gamma - this.cameraOrientation.gamma) * Math.PI / 180;
+                // rotate around
+                var diffZ = e.alpha - this.cameraOrientation.alpha;
+                // rotate up/down
+                var diffX = e.beta - this.cameraOrientation.beta;
+                // rotate left/right
+                var diffY = e.gamma - this.cameraOrientation.gamma;
 
-                this.sceneCamera.rotation.x += diffX;
-                this.sceneCamera.rotation.y += diffY;
+                var rotationX = Math.cos(diffZ) * diffX + Math.sin(diffZ) * diffY;
+                var rotationY = Math.sin(diffZ) * diffX + Math.cos(diffZ) * diffY;
+
+                this.sceneCamera.rotation.x += rotationX;
+                this.sceneCamera.rotation.y += rotationY;
             }
 
             this.cameraOrientation = e;
@@ -234,9 +240,9 @@ var ARView = function () {
         key: 'handleMotion',
         value: function handleMotion(e) {
             if (this.cameraMotion !== null) {
-                this.camera.translateX(Math.round(e.acceleration.x) / 100);
-                this.camera.translateY(Math.round(e.acceleration.y) / 100);
-                this.camera.translateZ(Math.round(e.acceleration.z) / 100);
+                this.camera.translateX(e.acceleration.x * 100);
+                this.camera.translateY(e.acceleration.y * 100);
+                this.camera.translateZ(e.acceleration.z * 100);
             }
 
             this.cameraMotion = e;
@@ -290,7 +296,7 @@ var ARDebugger = function () {
             this.debugWindow.style.bottom = '0px';
             this.debugWindow.style.left = '0px';
             this.debugWindow.style.color = 'white';
-            this.debugWindow.style.backgroundColor = 'black';
+            this.debugWindow.style.backgroundColor = 'transparent';
             this.debugWindow.style.whiteSpace = 'pre';
             this.debugWindow.style.padding = '10px';
             document.body.append(this.debugWindow);
@@ -302,9 +308,9 @@ var ARDebugger = function () {
             this.debugWindow.innerHTML = 'alpha: ' + this.arView.cameraOrientation.alpha + '\n';
             this.debugWindow.innerHTML += 'beta: ' + this.arView.cameraOrientation.beta + '\n';
             this.debugWindow.innerHTML += 'gamma: ' + this.arView.cameraOrientation.gamma + '\n';
-            this.debugWindow.innerHTML += 'acceleration.x: ' + Math.round(this.arView.cameraMotion.acceleration.x) + '\n';
-            this.debugWindow.innerHTML += 'acceleration.y: ' + Math.round(this.arView.cameraMotion.acceleration.y) + '\n';
-            this.debugWindow.innerHTML += 'acceleration.z: ' + Math.round(this.arView.cameraMotion.acceleration.z) + '\n';
+            this.debugWindow.innerHTML += 'acceleration.x: ' + this.arView.cameraMotion.acceleration.x + '\n';
+            this.debugWindow.innerHTML += 'acceleration.y: ' + this.arView.cameraMotion.acceleration.y + '\n';
+            this.debugWindow.innerHTML += 'acceleration.z: ' + this.arView.cameraMotion.acceleration.z + '\n';
         }
     }]);
 
