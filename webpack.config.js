@@ -18,6 +18,7 @@ module.exports = [{
     ],
   },
   devServer: {
+    host: '0.0.0.0',
     publicPath: '/dist',
     contentBase: [path.join(__dirname, "docs")],
     inline: true,
