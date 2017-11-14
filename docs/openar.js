@@ -239,11 +239,11 @@ var ARView = function () {
     }, {
         key: 'handleMotion',
         value: function handleMotion(e) {
-            if (this.cameraMotion !== null) {
-                this.camera.translateX(e.acceleration.x * 100);
-                this.camera.translateY(e.acceleration.y * 100);
-                this.camera.translateZ(e.acceleration.z * 100);
-            }
+            // if(this.cameraMotion !== null) {
+            //     this.camera.translateX(e.acceleration.x * 100);
+            //     this.camera.translateY(e.acceleration.y * 100);
+            //     this.camera.translateZ(e.acceleration.z * 100);
+            // }
 
             this.cameraMotion = e;
         }
