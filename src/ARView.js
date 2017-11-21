@@ -109,15 +109,19 @@ export default class ARView {
         gl.readPixels(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight, gl.RGBA, gl.UNSIGNED_BYTE, currentFrame);
 
         if (this.prevFrame !== null) {
-            // allocate data structure for tracker
-            const currentPyramidT = new jsfeat.pyramid_t(1);
-            const prevPyramidT = new jsfeat.pyramid_t(1);
+            // allocate pyramid data structure for tracker
+            const currentPyramidT = new jsfeat.pyramid_t(3);
+            const prevPyramidT = new jsfeat.pyramid_t(3);
             currentPyramidT.allocate(gl.drawingBufferWidth, gl.drawingBufferHeight, jsfeat.U8_t | jsfeat.C1_t);
             prevPyramidT.allocate(gl.drawingBufferWidth, gl.drawingBufferHeight, jsfeat.U8_t | jsfeat.C1_t);
 
             // get greyscale version of previous and current frame
             jsfeat.imgproc.grayscale(currentFrame, gl.drawingBufferWidth, gl.drawingBufferHeight, currentPyramidT.data[0], jsfeat.COLOR_RGBA2GRAY);
             jsfeat.imgproc.grayscale(this.prevFrame, gl.drawingBufferWidth, gl.drawingBufferHeight, prevPyramidT.data[0], jsfeat.COLOR_RGBA2GRAY);
+
+            // build layers of pyramid
+            currentPyramidT.build(currentPyramidT.data[0], false);
+            prevPyramidT.build(prevPyramidT.data[0], false);
 
             // initialize previous and current frame features
             // detect features for previous frame only using fast algorithm
