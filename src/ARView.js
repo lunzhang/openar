@@ -109,34 +109,36 @@ export default class ARView {
         gl.readPixels(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight, gl.RGBA, gl.UNSIGNED_BYTE, currentFrame);
 
         if (this.prevFrame !== null) {
-            // grayscale version of current and previous frames
-            const currentGrayFrame = new jsfeat.matrix_t(gl.drawingBufferWidth, gl.drawingBufferHeight, jsfeat.U8_t | jsfeat.C1_t);
-            const prevGrayFrame = new jsfeat.matrix_t(gl.drawingBufferWidth, gl.drawingBufferHeight, jsfeat.U8_t | jsfeat.C1_t);
-            jsfeat.imgproc.grayscale(currentFrame, gl.drawingBufferWidth, gl.drawingBufferHeight, currentGrayFrame, jsfeat.COLOR_RGBA2GRAY);
-            jsfeat.imgproc.grayscale(this.prevFrame, gl.drawingBufferWidth, gl.drawingBufferHeight, prevGrayFrame, jsfeat.COLOR_RGBA2GRAY);
+            // allocate data structure for tracker
+            const currentPyramidT = new jsfeat.pyramid_t(1);
+            const prevPyramidT = new jsfeat.pyramid_t(1);
+            currentPyramidT.allocate(gl.drawingBufferWidth, gl.drawingBufferHeight, jsfeat.U8_t | jsfeat.C1_t);
+            prevPyramidT.allocate(gl.drawingBufferWidth, gl.drawingBufferHeight, jsfeat.U8_t | jsfeat.C1_t);
 
-            // initialize and detect current and previous frame corners
+            // get greyscale version of previous and current frame
+            jsfeat.imgproc.grayscale(currentFrame, gl.drawingBufferWidth, gl.drawingBufferHeight, currentPyramidT.data[0], jsfeat.COLOR_RGBA2GRAY);
+            jsfeat.imgproc.grayscale(this.prevFrame, gl.drawingBufferWidth, gl.drawingBufferHeight, prevPyramidT.data[0], jsfeat.COLOR_RGBA2GRAY);
+
+            // initialize previous and current frame features
+            // detect features for previous frame only using fast algorithm
             const currentCorners = [];
             const prevCorners = [];
-            for (let i = 0; i < currentGrayFrame.data.length; i++) {
-                currentCorners[i] = new jsfeat.keypoint_t();
+            for (let i = 0; i < gl.drawingBufferWidth * gl.drawingBufferHeight; i++) {
                 prevCorners[i] = new jsfeat.keypoint_t();
             }
-            jsfeat.fast_corners.detect(currentGrayFrame, currentCorners, 3);
-            jsfeat.fast_corners.detect(prevGrayFrame, prevCorners, 3);
+            const featuresCount = jsfeat.fast_corners.detect(prevPyramidT.data[0], prevCorners, 3);
 
-            // grayscale frames in pyramid_t data type
-            const currentPyramidT = new jsfeat.pyramid_t();
-            const prevPyramidT = new jsfeat.pyramid_t();
-            currentPyramidT.allocate(gl.drawingBufferWidth, gl.drawingBufferHeight, currentGrayFrame.type);
-            prevPyramidT.allocate(gl.drawingBufferWidth, gl.drawingBufferHeight, currentGrayFrame.type);
-            currentPyramidT.data[0] = currentGrayFrame;
-            prevPyramidT.data[0] = prevGrayFrame;
+            // convert detected frames to array format
+            const prevCornersArray = [];
+            for (let i = 0; i < featuresCount; i++) {
+                prevCornersArray.push(prevCorners[i].x);
+                prevCornersArray.push(prevCorners[i].y);
+            }
 
-            // klt tracker
+            // klt tracker - tracks features in previous img and maps them to current
             const status = [];
             jsfeat.optical_flow_lk.track(prevPyramidT, currentPyramidT,
-            prevCorners, currentCorners, currentGrayFrame.data.length,
+            prevCornersArray, currentCorners, featuresCount,
             20, 30, status, 0.01, 0.0001);
         }
 
