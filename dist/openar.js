@@ -88,7 +88,7 @@ var _ARView = __webpack_require__(2);
 
 var _ARView2 = _interopRequireDefault(_ARView);
 
-var _ARDebugger = __webpack_require__(4);
+var _ARDebugger = __webpack_require__(6);
 
 var _ARDebugger2 = _interopRequireDefault(_ARDebugger);
 
@@ -143,11 +143,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _jsfeat = __webpack_require__(3);
-
-var _jsfeat2 = _interopRequireDefault(_jsfeat);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+var _index = __webpack_require__(3);
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -172,8 +168,6 @@ var ARView = function () {
         this.loaded = false;
         this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1);
         this.camera.position.z = 1;
-
-        _jsfeat2.default.fast_corners.set_threshold(20);
 
         this.init();
         this.initListeners();
@@ -279,33 +273,7 @@ var ARView = function () {
             gl.readPixels(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight, gl.RGBA, gl.UNSIGNED_BYTE, currentFrame);
 
             if (this.prevFrame !== null) {
-                // grayscale version of current and previous frames
-                var currentGrayFrame = new _jsfeat2.default.matrix_t(gl.drawingBufferWidth, gl.drawingBufferHeight, _jsfeat2.default.U8_t | _jsfeat2.default.C1_t);
-                var prevGrayFrame = new _jsfeat2.default.matrix_t(gl.drawingBufferWidth, gl.drawingBufferHeight, _jsfeat2.default.U8_t | _jsfeat2.default.C1_t);
-                _jsfeat2.default.imgproc.grayscale(currentFrame, gl.drawingBufferWidth, gl.drawingBufferHeight, currentGrayFrame, _jsfeat2.default.COLOR_RGBA2GRAY);
-                _jsfeat2.default.imgproc.grayscale(this.prevFrame, gl.drawingBufferWidth, gl.drawingBufferHeight, prevGrayFrame, _jsfeat2.default.COLOR_RGBA2GRAY);
-
-                // initialize and detect current and previous frame corners
-                var currentCorners = [];
-                var prevCorners = [];
-                for (var i = 0; i < currentGrayFrame.data.length; i++) {
-                    currentCorners[i] = new _jsfeat2.default.keypoint_t();
-                    prevCorners[i] = new _jsfeat2.default.keypoint_t();
-                }
-                _jsfeat2.default.fast_corners.detect(currentGrayFrame, currentCorners, 3);
-                _jsfeat2.default.fast_corners.detect(prevGrayFrame, prevCorners, 3);
-
-                // grayscale frames in pyramid_t data type
-                var currentPyramidT = new _jsfeat2.default.pyramid_t();
-                var prevPyramidT = new _jsfeat2.default.pyramid_t();
-                currentPyramidT.allocate(gl.drawingBufferWidth, gl.drawingBufferHeight, currentGrayFrame.type);
-                prevPyramidT.allocate(gl.drawingBufferWidth, gl.drawingBufferHeight, currentGrayFrame.type);
-                currentPyramidT.data[0] = currentGrayFrame;
-                prevPyramidT.data[0] = prevGrayFrame;
-
-                // klt tracker
-                var status = [];
-                _jsfeat2.default.optical_flow_lk.track(prevPyramidT, currentPyramidT, prevCorners, currentCorners, currentGrayFrame.data.length, 20, 30, status, 0.01, 0.0001);
+                this.transform = (0, _index.motionEstimation)(this.prevFrame, currentFrame, gl.drawingBufferWidth, gl.drawingBufferHeight);
             }
 
             this.prevFrame = currentFrame;
@@ -319,6 +287,99 @@ exports.default = ARView;
 
 /***/ }),
 /* 3 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.motionEstimation = undefined;
+
+var _motionEstimation = __webpack_require__(4);
+
+var _motionEstimation2 = _interopRequireDefault(_motionEstimation);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+exports.motionEstimation = _motionEstimation2.default;
+
+/***/ }),
+/* 4 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _jsfeat = __webpack_require__(5);
+
+var _jsfeat2 = _interopRequireDefault(_jsfeat);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+_jsfeat2.default.fast_corners.set_threshold(20);
+
+// calculates the relative camera pose using two frames
+function motionEstimation(prevFrame, currentFrame, width, height) {
+    // allocate pyramid data structure for tracker
+    var currentPyramidT = new _jsfeat2.default.pyramid_t(3);
+    var prevPyramidT = new _jsfeat2.default.pyramid_t(3);
+    currentPyramidT.allocate(width, height, _jsfeat2.default.U8_t | _jsfeat2.default.C1_t);
+    prevPyramidT.allocate(width, height, _jsfeat2.default.U8_t | _jsfeat2.default.C1_t);
+
+    // get greyscale version of previous and current frame
+    _jsfeat2.default.imgproc.grayscale(currentFrame, width, height, currentPyramidT.data[0], _jsfeat2.default.COLOR_RGBA2GRAY);
+    _jsfeat2.default.imgproc.grayscale(prevFrame, width, height, prevPyramidT.data[0], _jsfeat2.default.COLOR_RGBA2GRAY);
+
+    // build layers of pyramid
+    currentPyramidT.build(currentPyramidT.data[0], false);
+    prevPyramidT.build(prevPyramidT.data[0], false);
+
+    // initialize previous and current frame features
+    // detect features for previous frame only using fast algorithm
+    var currentCorners = [];
+    var prevCorners = [];
+    for (var i = 0; i < width * height; i++) {
+        prevCorners[i] = new _jsfeat2.default.keypoint_t();
+    }
+    var featuresCount = _jsfeat2.default.fast_corners.detect(prevPyramidT.data[0], prevCorners, 3);
+
+    // convert detected frames to array format
+    var prevCornersArray = [];
+    for (var _i = 0; _i < featuresCount; _i++) {
+        prevCornersArray.push(prevCorners[_i].x);
+        prevCornersArray.push(prevCorners[_i].y);
+    }
+
+    // klt tracker - tracks features in previous img and maps them to current
+    var status = [];
+    _jsfeat2.default.optical_flow_lk.track(prevPyramidT, currentPyramidT, prevCornersArray, currentCorners, featuresCount, 15, 30, status, 0.01, 0.0001);
+
+    // this class allows you to use above Motion Kernels
+    // to estimate motion even with wrong correspondences
+    var ransac = _jsfeat2.default.motion_estimator.ransac;
+
+    // create homography kernel
+    // you can reuse it for different point sets
+    var homo_kernel = new _jsfeat2.default.motion_model.homography2d();
+    var transform = new _jsfeat2.default.matrix_t(3, 3, _jsfeat2.default.F32_t | _jsfeat2.default.C1_t);
+
+    var params = new _jsfeat2.default.ransac_params_t(4, 3, 0.5, 0.99);
+
+    var ok = ransac(params, homo_kernel, prevCornersArray, currentCorners, featuresCount, transform, status, 1000);
+
+    return transform;
+};
+
+exports.default = motionEstimation;
+
+/***/ }),
+/* 5 */
 /***/ (function(module, exports) {
 
 /**
@@ -5890,7 +5951,7 @@ The references are:
 
 
 /***/ }),
-/* 4 */
+/* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5930,19 +5991,9 @@ var ARDebugger = function () {
         key: 'update',
         value: function update() {
             if (this.arView.cameraOrientation === null || this.arView.cameraMotion === null) return;
-            this.debugWindow.innerHTML = 'alpha: ' + this.arView.cameraOrientation.alpha + '\n';
-            this.debugWindow.innerHTML += 'beta: ' + this.arView.cameraOrientation.beta + '\n';
-            this.debugWindow.innerHTML += 'gamma: ' + this.arView.cameraOrientation.gamma + '\n';
-            this.debugWindow.innerHTML += 'acceleration.x: ' + this.arView.cameraMotion.acceleration.x + '\n';
-            this.debugWindow.innerHTML += 'acceleration.y: ' + this.arView.cameraMotion.acceleration.y + '\n';
-            this.debugWindow.innerHTML += 'acceleration.z: ' + this.arView.cameraMotion.acceleration.z + '\n';
-
-            this.debugWindow.innerHTML += 'camera.rotation.x: ' + this.arView.sceneCamera.rotation.x + '\n';
-            this.debugWindow.innerHTML += 'camera.rotation.y: ' + this.arView.sceneCamera.rotation.y + '\n';
-            this.debugWindow.innerHTML += 'camera.rotation.z: ' + this.arView.sceneCamera.rotation.z + '\n';
-            this.debugWindow.innerHTML += 'camera.position.x: ' + this.arView.sceneCamera.position.x + '\n';
-            this.debugWindow.innerHTML += 'camera.position.y: ' + this.arView.sceneCamera.position.y + '\n';
-            this.debugWindow.innerHTML += 'camera.position.z: ' + this.arView.sceneCamera.position.z + '\n';
+            for (var i = 0; i < this.arView.transform.data.length; i++) {
+                this.debugWindow.innerHTML = this.arView.transform.data[i] + '\n';
+            }
         }
     }]);
 
