@@ -18,7 +18,7 @@ export default class ARDebugger {
     }
 
     update() {
-        if(this.arView.cameraOrientation === null || this.arView.cameraMotion === null) return;
+        if(!this.arView.transform) return;
         for (let i = 0; i < this.arView.transform.data.length; i++) {
             this.debugWindow.innerHTML = this.arView.transform.data[i] + '\n';
         }

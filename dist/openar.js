@@ -5990,7 +5990,7 @@ var ARDebugger = function () {
     }, {
         key: 'update',
         value: function update() {
-            if (this.arView.cameraOrientation === null || this.arView.cameraMotion === null) return;
+            if (!this.arView.transform) return;
             for (var i = 0; i < this.arView.transform.data.length; i++) {
                 this.debugWindow.innerHTML = this.arView.transform.data[i] + '\n';
             }
