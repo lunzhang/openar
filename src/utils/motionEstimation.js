@@ -18,7 +18,7 @@ function motionEstimation(prevFrame, currentFrame, width, height) {
     const prevFeatures = [];
     const currentFeatures = [];
     // detect features for previous frame
-    const featuresCount = detectFeatures(prevFrame, prevFeatures, width, height);
+    const featuresCount = detectFeatures(prevPyramidT, prevFeatures, width, height);
 
     // klt tracker - tracks features in previous img and maps them to current
     const status = [];
@@ -71,7 +71,7 @@ function detectFeatures(frame, features, width, height) {
     const count = jsfeat.fast_corners.detect(frame.data[0], tempFeatures, 3);
 
     // add detected features to array
-    for (let i = 0; i < featuresCount; i++) {
+    for (let i = 0; i < count; i++) {
         features.push(tempFeatures[i].x);
         features.push(tempFeatures[i].y);
     }
