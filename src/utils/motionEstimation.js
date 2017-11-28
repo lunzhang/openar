@@ -2,69 +2,89 @@ import jsfeat from 'jsfeat';
 
 jsfeat.fast_corners.set_threshold(20);
 
-// calculates the relative camera pose using two frames
+/**
+* Calculates the relative camera pose using two frames
+* 1. Convert frames to grayscale
+* 2. Find feature in previous frame
+* 3. Map features in previous frame to current frame
+* 4. Use 8 point algorithm with ransac to find essential matrix
+* 5. Compute R and T from essential matrix
+**/
 function motionEstimation(prevFrame, currentFrame, width, height) {
-    // allocate pyramid data structure for tracker
-    const currentPyramidT = new jsfeat.pyramid_t(3);
-    const prevPyramidT = new jsfeat.pyramid_t(3);
-    currentPyramidT.allocate(width, height, jsfeat.U8_t | jsfeat.C1_t);
-    prevPyramidT.allocate(width, height, jsfeat.U8_t | jsfeat.C1_t);
+    // convert frames to grayscale
+    const prevPyramidT = convertToGrayScale(prevFrame, width, height);
+    const currentPyramidT = convertToGrayScale(currentFrame, width, height);
 
-    // get greyscale version of previous and current frame
-    jsfeat.imgproc.grayscale(currentFrame, width, height, currentPyramidT.data[0], jsfeat.COLOR_RGBA2GRAY);
-    jsfeat.imgproc.grayscale(prevFrame, width, height, prevPyramidT.data[0], jsfeat.COLOR_RGBA2GRAY);
-
-    // build layers of pyramid
-    currentPyramidT.build(currentPyramidT.data[0], false);
-    prevPyramidT.build(prevPyramidT.data[0], false);
-
-    // detect features for previous frame only using fast algorithm
-    const prevCornersTemp = [];
-    for (let i = 0; i < width * height; i++) {
-        prevCornersTemp[i] = new jsfeat.keypoint_t();
-    }
-    const featuresCount = jsfeat.fast_corners.detect(prevPyramidT.data[0], prevCornersTemp, 3);
-
-    // convert detected frames to array format
-    const prevCorners = [];
-    const currentCorners = [];
-    for (let i = 0; i < featuresCount; i++) {
-        prevCorners.push(prevCornersTemp[i].x);
-        prevCorners.push(prevCornersTemp[i].y);
-    }
+    const prevFeatures = [];
+    const currentFeatures = [];
+    // detect features for previous frame
+    const featuresCount = detectFeatures(prevFrame, prevFeatures, width, height);
 
     // klt tracker - tracks features in previous img and maps them to current
     const status = [];
     jsfeat.optical_flow_lk.track(prevPyramidT, currentPyramidT,
-    prevCorners, currentCorners, featuresCount,
+    prevFeatures, currentFeatures, featuresCount,
     15, 30, status, 0.01, 0.0001);
 
-    // estimate motion even with wrong correspondences
+    // ransac with 8 point algorithm
     const ransac = jsfeat.motion_estimator.ransac;
-
     // create homography kernel
     const homo_kernel = new jsfeat.motion_model.homography2d();
     const essentialMatrix = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
     const params = new jsfeat.ransac_params_t(4, 3, 0.5, 0.99);
 
-    // calculate essential matrix using features detected in the images
-    ransac(params, homo_kernel, prevCorners, currentCorners, featuresCount, essentialMatrix, status, 1000);
+    // calculate essential matrix using features detected in the two images
+    ransac(params, homo_kernel, prevFeatures, currentFeatures, featuresCount, essentialMatrix, status, 1000);
 
-    const rotation = [];
-    const translation = [];
-    recoverPose(essentialMatrix, currentCorners, prevCorners, rotation, translation);
-
-    return {
-        rotation,
-        translation,
-    };
+    // return rotation and translation calculated from essentialMatrix
+    return recoverPose(essentialMatrix, currentFeatures, prevFeatures);
 };
 
-// calculates the rotation and translation using essentialMatrix
-// E = U * D * V after svd
-// R = U * Winvert * V
-// T = U * W * D * Ut
-function recoverPose(essentialMatrix, currentCorners, prevCorners, rotation, translation) {
+/**
+* Converts frame to grayscale
+* @return pyramidT : pyramid_t
+**/
+function convertToGrayScale(frame, width, height) {
+    // allocate pyramid data structure for feature tracker
+    const pyramidT = new jsfeat.pyramid_t(3);
+    pyramidT.allocate(width, height, jsfeat.U8_t | jsfeat.C1_t);
+
+    // get grayscale version of frames
+    jsfeat.imgproc.grayscale(frame, width, height, pyramidT.data[0], jsfeat.COLOR_RGBA2GRAY);
+
+    // build pyramid layers
+    pyramidT.build(pyramidT.data[0], false);
+
+    return pyramidT;
+};
+
+/**
+* Detect features in frame using fast algorithm
+* @return number of features detected
+**/
+function detectFeatures(frame, features, width, height) {
+    // detect features for frame
+    const tempFeatures = [];
+    for (let i = 0; i < width * height; i++) {
+        tempFeatures[i] = new jsfeat.keypoint_t();
+    }
+    const count = jsfeat.fast_corners.detect(frame.data[0], tempFeatures, 3);
+
+    // add detected features to array
+    for (let i = 0; i < featuresCount; i++) {
+        features.push(tempFeatures[i].x);
+        features.push(tempFeatures[i].y);
+    }
+
+    return count;
+};
+
+/** Calculates the rotation and translation using an essential matrix
+* E = U * D * V after svd
+* R = U * Winvert * V
+* T = U * W * D * Ut
+**/
+function recoverPose(essentialMatrix, currentFeatures, prevFeatures) {
     const D = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
     const U = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
     const V = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
@@ -93,8 +113,10 @@ function recoverPose(essentialMatrix, currentCorners, prevCorners, rotation, tra
     jsfeat.matmath.multiply_3x3(T, T, D);
     jsfeat.matmath.multiply_ABt(T, T, U);
 
-    rotation = R.data;
-    translation = T.data;
+    return {
+        rotation: R.data,
+        translation: T.data,
+    };
 };
 
 export default motionEstimation;
