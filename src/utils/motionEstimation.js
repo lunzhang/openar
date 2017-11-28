@@ -61,10 +61,12 @@ function motionEstimation(prevFrame, currentFrame, width, height) {
 };
 
 // calculates the rotation and translation using essentialMatrix
+// E = U * D * V after svd
+// R = U * Winvert * V
+// T = U * W * D * Ut
 function recoverPose(essentialMatrix, currentCorners, prevCorners, rotation, translation) {
     const D = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
     const U = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
-    const Ut = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
     const V = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
     const W = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
     W.data[1] = -1;
@@ -82,8 +84,6 @@ function recoverPose(essentialMatrix, currentCorners, prevCorners, rotation, tra
     // calculate SVD of essential matrix
     jsfeat.linalg.svd_decompose(essentialMatrix, D, U, V);
 
-    jsfeat.matmath.transpose(Ut, U);
-
     // R = U * Winvert * V
     jsfeat.matmath.multiply_3x3(R, U, Winvert);
     jsfeat.matmath.multiply_3x3(R, R, V);
@@ -91,7 +91,7 @@ function recoverPose(essentialMatrix, currentCorners, prevCorners, rotation, tra
     // T = U * W * D * Ut
     jsfeat.matmath.multiply_3x3(T, U, W);
     jsfeat.matmath.multiply_3x3(T, T, D);
-    jsfeat.matmath.multiply_3x3(T, T, Ut);
+    jsfeat.matmath.multiply_ABt(T, T, U);
 
     rotation = R.data;
     translation = T.data;
