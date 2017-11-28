@@ -61,7 +61,7 @@ function motionEstimation(prevFrame, currentFrame, width, height) {
 };
 
 // calculates the rotation and translation using essentialMatrix
-function recoverPose(essentialMatrix, currentCorners, prevCorners, rotation, transformation) {
+function recoverPose(essentialMatrix, currentCorners, prevCorners, rotation, translation) {
     const D = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
     const U = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
     const Ut = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
