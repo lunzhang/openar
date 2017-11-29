@@ -114,8 +114,20 @@ function recoverPose(essentialMatrix, currentFeatures, prevFeatures) {
     jsfeat.matmath.multiply_ABt(T, T, U);
 
     return {
-        rotation: R.data,
+        rotation: decomposeRotationMatrix(R.data),
         translation: T.data,
+    };
+};
+
+/**
+* Converts a 3x3 rotation matrix in array format to x/y/z angles
+* Uses equation found here http://nghiaho.com/?page_id=846
+**/
+function decomposeRotationMatrix(matrix) {
+    return {
+        x: Math.atan2(matrix[7], matrix[8]),
+        y: Math.atan2(-matrix[6], Math.sqrt(Math.pow(matrix[7], 2) + Math.pow(matrix[8], 2))),
+        z: Math.atan2(matrix[3], matrix[0]),
     };
 };
 
