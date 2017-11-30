@@ -9,7 +9,7 @@ jsfeat.fast_corners.set_threshold(20);
 function convertToGrayScale(frame, width, height) {
     // allocate pyramid data structure for feature tracker
     const pyramidT = new jsfeat.pyramid_t(3);
-    pyramidT.allocate(width, height, jsfeat.U8_t);
+    pyramidT.allocate(width, height, jsfeat.U8_t | jsfeat.C1_t);
 
     // get grayscale version of frames
     jsfeat.imgproc.grayscale(frame, width, height, pyramidT.data[0], jsfeat.COLOR_RGBA2GRAY);
@@ -59,21 +59,21 @@ function decomposeRotationMatrix(matrix) {
 * T = U * W * D * Ut
 */
 function recoverPose(essentialMatrix) {
-    const D = new jsfeat.matrix_t(3, 3, jsfeat.F32_t);
-    const U = new jsfeat.matrix_t(3, 3, jsfeat.F32_t);
-    const V = new jsfeat.matrix_t(3, 3, jsfeat.F32_t);
-    const W = new jsfeat.matrix_t(3, 3, jsfeat.F32_t);
+    const D = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
+    const U = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
+    const V = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
+    const W = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
     W.data[1] = -1;
     W.data[3] = 1;
     W.data[8] = 1;
 
     // get inverse of W
-    const Winvert = new jsfeat.matrix_t(3, 3, jsfeat.F32_t);
+    const Winvert = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
     jsfeat.linalg.svd_invert(Winvert, W);
 
     // rotation and translation matrices
-    const R = new jsfeat.matrix_t(3, 3, jsfeat.F32_t);
-    const T = new jsfeat.matrix_t(3, 3, jsfeat.F32_t);
+    const R = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
+    const T = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
 
     // calculate SVD of essential matrix
     jsfeat.linalg.svd_decompose(essentialMatrix, D, U, V);
@@ -122,7 +122,7 @@ function motionEstimation(prevFrame, currentFrame, width, height) {
     const ransac = jsfeat.motion_estimator.ransac;
     // create homography kernel
     const homo_kernel = new jsfeat.motion_model.homography2d();
-    const essentialMatrix = new jsfeat.matrix_t(3, 3, jsfeat.F32_t);
+    const essentialMatrix = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
     const params = new jsfeat.ransac_params_t(4, 3, 0.5, 0.99);
 
     // calculate essential matrix using features detected in the two images
