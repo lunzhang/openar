@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+  html, body {
+    margin: 0;
+  }
+  </style>
+</head>
+<body>
+    <div>
+        <h1> Original Image </h1>
+        <canvas id="original-image-1"> </canvas>
+        <canvas id="original-image-2"> </canvas>
+    </div>
+    <div>
+        <h1> GrayScale</h1>
+        <canvas id="grayscale-image-1"> </canvas>
+        <canvas id="grayscale-image-2"> </canvas>
+    </div>
+    <div>
+        <h1> Feature Detection</h1>
+        <canvas id="feature-image-1"> </canvas>
+        <canvas id="feature-image-2"> </canvas>
+        <h1> Camera Pose</h1>
+        <div id="camera-pose" style="white-space: pre;">
+
+        </div>
+    </div>
+    <script src="../libs/jsfeat.js"> </script>
+    <script src="./motionEstimation.js"></script>
+    <script src="./index.js"></script>
+</body>
+</html>
