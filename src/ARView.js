@@ -45,7 +45,7 @@ export default class ARView {
         const material = new THREE.SpriteMaterial({ map: this.videoTexture });
 
         // testing without webcam
-        // const map = new THREE.TextureLoader().load("./pulpitrock.jpg", () => {
+        // const map = new THREE.TextureLoader().load("../res/pulpitrock.jpg", () => {
         //     this.loaded = true;
         // });
         // const material = new THREE.SpriteMaterial({ map: map });
