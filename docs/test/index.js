@@ -1,5 +1,5 @@
-const IMAGE_WIDTH = 300;
-const IMAGE_HEIGHT = 200;
+const IMAGE_WIDTH = 150;
+const IMAGE_HEIGHT = 150;
 
 // Draw image to canvas
 function addImage(canvasId, imageSrc) {
@@ -75,7 +75,7 @@ function detectAndTrackFeatures(canvas1Id, canvas2Id, frame1, frame2) {
         var status = [];
         jsfeat.optical_flow_lk.track(
             frame1, frame2, frame1Feat, frame2Feat,
-            featuresCount, 15, 30, status, 0.01, 0.0001,
+            featuresCount, 30, 30, status, 0.01, 0.0001,
         );
 
         // Draw image 2 features
