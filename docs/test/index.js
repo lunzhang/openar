@@ -78,11 +78,15 @@ function detectAndTrackFeatures(canvas1Id, canvas2Id, frame1, frame2) {
             featuresCount, 30, 30, status, 0.01, 0.001,
         );
 
-        // Draw image 2 features
+        var counter = 0;
+        // Draw detected image 2 features
         for(var i = 0; i < frame2Feat.length; i += 2) {
-            context2.beginPath();
-            context2.arc(frame2Feat[i], frame2Feat[i + 1], 1, 0, 2 * Math.PI);
-            context2.fill();
+            if(status[counter] === 1) {
+                context2.beginPath();
+                context2.arc(frame2Feat[i], frame2Feat[i + 1], 1, 0, 2 * Math.PI);
+                context2.fill();
+            }
+            counter++;
         }
 
         res({frame1Feat, frame2Feat, featuresCount, status});
@@ -100,8 +104,11 @@ function calculateCameraPose(frame1Feat, frame2Feat, featuresCount, status) {
     var essentialMatrix = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
     var params = new jsfeat.ransac_params_t(4, 3, 0.5, 0.99);
 
+    var mask = new jsfeat.matrix_t(featuresCount, 1, jsfeat.U8_t | jsfeat.C1_t);
+    copyArray(status, mask.data);
+    
     // calculate essential matrix using features detected in the two images
-    ransac(params, homo_kernel, frame1Feat, frame2Feat, featuresCount, essentialMatrix, status, 1000);
+    ransac(params, homo_kernel, frame1Feat, frame2Feat, featuresCount, essentialMatrix, mask, 1000);
 
     var pose = recoverPose(essentialMatrix);
 
@@ -111,6 +118,12 @@ function calculateCameraPose(frame1Feat, frame2Feat, featuresCount, status) {
     text.innerHTML += 'Translation X: ' + pose.translation.x + '\n';
     text.innerHTML += 'Translation Y: ' + pose.translation.y + '\n';
     text.innerHTML += 'Translation Z: ' + pose.translation.z + '\n';
+}
+
+function copyArray(source, target) {
+    for(let i = 0; i < source.length; i++) {
+        target[i] = source[i];
+    }
 }
 
 // Draw image 2 first
