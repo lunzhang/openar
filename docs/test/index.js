@@ -67,7 +67,7 @@ function detectAndTrackFeatures(canvas1Id, canvas2Id, frame1, frame2) {
         var featuresCount = detectFeatures(frame1, frame1Feat, IMAGE_WIDTH, IMAGE_HEIGHT);
         for(var i = 0; i < frame1Feat.length; i += 2) {
             context1.beginPath();
-            context1.arc(frame1Feat[i], frame1Feat[i + 1], 1, 0, 2*Math.PI);
+            context1.arc(frame1Feat[i], frame1Feat[i + 1], 1, 0, 2 * Math.PI);
             context1.fill();
         }
 
@@ -75,13 +75,13 @@ function detectAndTrackFeatures(canvas1Id, canvas2Id, frame1, frame2) {
         var status = [];
         jsfeat.optical_flow_lk.track(
             frame1, frame2, frame1Feat, frame2Feat,
-            featuresCount, 30, 30, status, 0.01, 0.0001,
+            featuresCount, 30, 30, status, 0.01, 0.001,
         );
 
         // Draw image 2 features
-        for(var i = 0; i < frame1Feat.length; i += 2) {
+        for(var i = 0; i < frame2Feat.length; i += 2) {
             context2.beginPath();
-            context2.arc(frame2Feat[i], frame2Feat[i + 1], 1, 0, 2*Math.PI);
+            context2.arc(frame2Feat[i], frame2Feat[i + 1], 1, 0, 2 * Math.PI);
             context2.fill();
         }
 
