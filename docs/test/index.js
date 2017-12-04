@@ -106,9 +106,6 @@ function calculateCameraPose(frame1Feat, frame2Feat, featuresCount, status) {
 
     var mask = new jsfeat.matrix_t(featuresCount, 1, jsfeat.U8_t | jsfeat.C1_t);
     copyArray(status, mask.data);
-    
-    // calculate essential matrix using features detected in the two images
-    ransac(params, homo_kernel, frame1Feat, frame2Feat, featuresCount, essentialMatrix, mask, 1000);
 
     var pose = recoverPose(essentialMatrix);
 
@@ -118,12 +115,6 @@ function calculateCameraPose(frame1Feat, frame2Feat, featuresCount, status) {
     text.innerHTML += 'Translation X: ' + pose.translation.x + '\n';
     text.innerHTML += 'Translation Y: ' + pose.translation.y + '\n';
     text.innerHTML += 'Translation Z: ' + pose.translation.z + '\n';
-}
-
-function copyArray(source, target) {
-    for(let i = 0; i < source.length; i++) {
-        target[i] = source[i];
-    }
 }
 
 // Draw image 2 first
@@ -138,6 +129,6 @@ addImage('original-image-2', '../res/test2.jpg').then(function(frame) {
     }).then(function(frame1) {
         return detectAndTrackFeatures('feature-image-1', 'feature-image-2', frame1, frame2);
     }).then(function({frame1Feat, frame2Feat, featuresCount, status}) {
-        return calculateCameraPose(frame1Feat, frame2Feat, featuresCount, status);
+        return calculateCameraPose(convertArrayToXY(frame1Feat), convertArrayToXY(frame2Feat), featuresCount, status);
     });
 });

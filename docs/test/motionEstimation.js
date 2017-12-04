@@ -1,5 +1,3 @@
-jsfeat.fast_corners.set_threshold(20);
-
 /**
 * Converts frame to grayscale
 * @return pyramidT : pyramid_t
@@ -51,7 +49,8 @@ function decomposeRotationMatrix(matrix) {
     };
 }
 
-/** Calculates the rotation and translation using an essential matrix
+/**
+* Calculates the rotation and translation from an essential matrix
 * E = U * D * V after svd
 * R = U * Winvert * V
 * T = U * W * D * Ut
@@ -96,7 +95,7 @@ function recoverPose(essentialMatrix) {
 * 1. Convert frames to grayscale
 * 2. Find feature in previous frame
 * 3. Map features in previous frame to current frame
-* 4. Use 8 point algorithm with ransac to find essential matrix
+* 4. Use 8 point or 5 point algorithm to find Essential Matrix (Not Implemented)
 * 5. Compute R and T from essential matrix
 */
 function motionEstimation(prevFrame, currentFrame, width, height) {
@@ -116,16 +115,34 @@ function motionEstimation(prevFrame, currentFrame, width, height) {
         featuresCount, 15, 30, status, 0.01, 0.0001,
     );
 
-    // ransac with 8 point algorithm
+    // ransac with homography
     const ransac = jsfeat.motion_estimator.ransac;
     // create homography kernel
     const homo_kernel = new jsfeat.motion_model.homography2d();
     const essentialMatrix = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
     const params = new jsfeat.ransac_params_t(4, 3, 0.5, 0.99);
-
-    // calculate essential matrix using features detected in the two images
-    ransac(params, homo_kernel, prevFeatures, currentFeatures, featuresCount, essentialMatrix, status, 1000);
+    const mask = new jsfeat.matrix_t(featuresCount, 1, jsfeat.U8_t | jsfeat.C1_t);
+    // convert status to matrix format
+    copyArray(status, mask.data);
 
     // return rotation and translation calculated from essentialMatrix
     return recoverPose(essentialMatrix);
+}
+
+function copyArray(source, target) {
+    for(let i = 0; i < source.length; i++) {
+        target[i] = source[i];
+    }
+}
+
+// Convert array of coordinates to x, y in respect to i, i + 1
+function convertArrayToXY(array) {
+    const newArray = [];
+    for(let i = 0; i < array.length; i += 2) {
+        newArray.push({
+            x: array[i],
+            y: array[i + 1]
+        });
+    }
+    return newArray;
 }
