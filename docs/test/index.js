@@ -107,6 +107,19 @@ function calculateCameraPose(frame1Feat, frame2Feat, featuresCount, status) {
     var mask = new jsfeat.matrix_t(featuresCount, 1, jsfeat.U8_t | jsfeat.C1_t);
     copyArray(status, mask.data);
 
+    let q = [];
+    let qp = [];
+    for (let i = 0; i < 5; i++) {
+        q.push([]);
+        qp.push([]);
+        q[i].push(frame1Feat[i * 20]);
+        q[i].push(frame1Feat[i * 20 + 1]);
+        qp[i].push(frame1Feat[i * 20]);
+        qp[i].push(frame1Feat[i * 20 + 1]);
+    }
+
+    compute_E_matrices(q, qp);
+
     var pose = recoverPose(essentialMatrix);
 
     text.innerHTML = 'Rotation X: ' + pose.rotation.x + '\n';
@@ -129,6 +142,7 @@ addImage('original-image-2', '../res/test2.jpg').then(function(frame) {
     }).then(function(frame1) {
         return detectAndTrackFeatures('feature-image-1', 'feature-image-2', frame1, frame2);
     }).then(function({frame1Feat, frame2Feat, featuresCount, status}) {
-        return calculateCameraPose(convertArrayToXY(frame1Feat), convertArrayToXY(frame2Feat), featuresCount, status);
+
+        return calculateCameraPose(frame1Feat, frame2Feat, featuresCount, status);
     });
 });
