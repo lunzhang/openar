@@ -93,6 +93,18 @@ function detectAndTrackFeatures(canvas1Id, canvas2Id, frame1, frame2) {
     });
 }
 
+function normalizeXCoord(xCoord) {
+    const Xcoordinate = 2 * xCoord / IMAGE_WIDTH - 1;
+
+    return Xcoordinate;
+};
+
+function normalizeYCoord(yCoord) {
+    const Ycoordinate = 2 * yCoord / IMAGE_HEIGHT - 1;
+
+    return Ycoordinate;
+};
+
 // calculate camera pose using frame features
 function calculateCameraPose(frame1Feat, frame2Feat, featuresCount, status) {
     var text = document.getElementById('camera-pose');
@@ -112,10 +124,10 @@ function calculateCameraPose(frame1Feat, frame2Feat, featuresCount, status) {
     for (let i = 0; i < 5; i++) {
         q.push([]);
         qp.push([]);
-        q[i].push(frame1Feat[i * 20]);
-        q[i].push(frame1Feat[i * 20 + 1]);
-        qp[i].push(frame1Feat[i * 20]);
-        qp[i].push(frame1Feat[i * 20 + 1]);
+        q[i].push(normalizeXCoord(frame1Feat[i * 20]));
+        q[i].push(normalizeYCoord(frame1Feat[i * 20 + 1]));
+        qp[i].push(normalizeXCoord(frame2Feat[i * 20]));
+        qp[i].push(normalizeYCoord(frame2Feat[i * 20 + 1]));
     }
 
     compute_E_matrices(q, qp);

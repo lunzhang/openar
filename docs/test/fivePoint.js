@@ -462,15 +462,13 @@ function EEeqns_5pt (E, A) {
             EEE_i.push(createMatrix(4, 4, 4));
         }
 
-        for (let j=0; j<3; j++) clearMatrix(EEE_i[j]);
-
         // Compute each EE'(i,q) = sum_p E(i,p) E(q,p)
         for (let q=0; q<3; q++) {
             // Accumulate EE(i, q)
             const EE_iq = createMatrix(4, 4);
 
             for (let p=0; p<3; p++) {
-                add4_2By4_2(EE_iq, multi4_1By4_1(E[i][p], E[q][p]));
+                add4_2To4_2(EE_iq, multi4_1By4_1(E[i][p], E[q][p]));
             }
 
             // Now, accumulate EEE(ij) = sum_q  EE'(i,q) * E(q, j)
@@ -813,9 +811,6 @@ function one_cofactor (A, poly, r0,  r1,  r2) {
 
 function compute_determinant (A, poly) {
     // Does the final determinant computation to return the determinant
-
-    // Clear out the polynomial
-    clearMatrix(poly);
 
     // Now, the three cofactors
     one_cofactor(A, poly, 0, 1, 2);
