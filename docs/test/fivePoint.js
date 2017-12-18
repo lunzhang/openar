@@ -408,10 +408,10 @@ function mono_coeff(B, A, n) {
     A[w0][n][xx] = B[x][x][z];
     A[w0][n][yy] = B[y][y][z];
     A[w0][n][xy] = B[x][y][z];
-    A[w0][n][xx] = B[x][x][x];
-    A[w0][n][xx] = B[x][x][y];
-    A[w0][n][xy] = B[x][y][y];
-    A[w0][n][yy] = B[y][y][y];
+    A[w0][n][xxx] = B[x][x][x];
+    A[w0][n][xxy] = B[x][x][y];
+    A[w0][n][xyy] = B[x][y][y];
+    A[w0][n][yyy] = B[y][y][y];
 
     // Terms in w^1
     A[w1][n][0] = B[w][z][z];
@@ -774,18 +774,6 @@ function reduce_Ematrix(A) {
             A[1][i][j] -= A[0][i+3][j] * fac;
         }
     }
-}
-
-function reduce_constant_terms (A) {
-    // This reduces the equation set to 6 x 6 by eliminating the
-    // constant terms at the end.  In this
-    // no pivoting, which relies on the pivots to be non-zero.
-
-    // Sweeping out the constant terms to reduce to 6 x 6
-    pivot (A, 9, 0, 8); sweep_up (A, 9, 9, 0);
-    pivot (A, 8, 0, 7); sweep_up (A, 8, 8, 0);
-    pivot (A, 7, 0, 6); sweep_up (A, 7, 7, 0);
-    pivot (A, 6, 0, 5); sweep_up (A, 6, 6, 0);
 }
 
 function one_cofactor (A, poly, r0,  r1,  r2) {
