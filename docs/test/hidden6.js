@@ -1,0 +1,1 @@
+const Maxdegree = 20;
