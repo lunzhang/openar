@@ -857,4 +857,6 @@ function compute_E_matrices(pts1, pts2) {
     for (let i = 0; i < nroots; i++) {
         compute_E_matrix (E, A, roots[i], Ematrices[i]);
     }
+
+    return nroots;
 }

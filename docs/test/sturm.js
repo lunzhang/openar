@@ -17,21 +17,22 @@ function poly() {
  *--------------------------------------------------------------------------*/
 
 function evalpoly (ord, coef, x) {
-   let fp = coef[ord];
-   let f = fp;
+   let fp = ord;
+   let f = coef[ord];
 
-   for (fp--; fp >= coef; fp--)
-      f = x * f + fp;
+   for (fp--; fp >= 0; fp--) {
+       f = x * f + coef[fp];
+   }
 
-   return(f);
+   return f;
 }
 
-function modrf_pos(ord, coef, a, b, val, invert) {
+function modrf_pos(ord, coef, a, b, roots, invert, counter) {
     let its;
     let fx, lfx;
     let fp;
-    let scoef = coef;
-    let ecoef = coef[ord];
+    let scoef = 0;
+    let ecoef = ord;
     let fa, fb;
 
     // Invert the interval if required
@@ -43,33 +44,34 @@ function modrf_pos(ord, coef, a, b, val, invert) {
 
     // Evaluate the polynomial at the end points
     if (invert) {
-        fb = fa = scoef;
-        for (fp = scoef + 1; fp <= ecoef; fp++) {
-            fa = a * fa + fp;
-            fb = b * fb + fp;
+        fb = fa = coef[scoef];
+        for (fp = 1; fp <= ecoef; fp++) {
+            fa = a * fa + coef[fp];
+            fb = b * fb + coef[fp];
         }
     }
     else {
-        fb = fa = ecoef;
+        fb = fa = coef[ecoef];
         for (fp = ecoef - 1; fp >= scoef; fp--) {
-            fa = a * fa + fp;
-            fb = b * fb + fp;
+            fa = a * fa + coef[fp];
+            fb = b * fb + coef[fp];
         }
     }
 
     // if there is no sign difference the method won't work
-    if (fa * fb > 0.0)
-    return(0);
+    if (fa * fb > 0.0) {
+        return 0;
+    }
 
     // Return if the values are close to zero already
     if (Math.abs(fa) < RELERROR) {
-        val = invert ? 1.0/a : a;
-        return(1);
+        roots[counter] = invert ? 1.0/a : a;
+        return 1;
     }
 
     if (Math.abs(fb) < RELERROR) {
-        val = invert ? 1.0/b : b;
-        return(1);
+        roots[counter] = invert ? 1.0/b : b;
+        return 1;
     }
 
     lfx = fa;
@@ -80,24 +82,26 @@ function modrf_pos(ord, coef, a, b, val, invert) {
 
         // Evaluate the polynomial at x
         if (invert) {
-            fx = scoef;
-            for (fp = scoef + 1; fp <= ecoef; fp++)
-            fx = x * fx + fp;
+            fx = coef[scoef];
+            for (fp = scoef + 1; fp <= ecoef; fp++) {
+                fx = x * fx + coef[fp];
+            }
         }
         else {
-            fx = ecoef;
-            for (fp = ecoef - 1; fp >= scoef; fp--)
-            fx = x * fx + fp;
+            fx = coef[ecoef];
+            for (fp = ecoef - 1; fp >= scoef; fp--) {
+                fx = x * fx + coef[fp];
+            }
         }
 
         // Evaluate two stopping conditions
         if (Math.abs(x) > RELERROR && Math.abs(fx/x) < RELERROR) {
-            val = invert ? 1.0/x : x;
-            return(1);
+            roots[counter] = invert ? 1.0/x : x;
+            return 1;
         }
         else if (Math.abs(fx) < RELERROR) {
-            val = invert ? 1.0/x : x;
-            return(1);
+            roots[counter] = invert ? 1.0/x : x;
+            return 1;
         }
 
         // Subdivide region, depending on whether fx has same sign as fa or fb
@@ -117,8 +121,8 @@ function modrf_pos(ord, coef, a, b, val, invert) {
 
         // Return if the difference between a and b is very small
         if (Math.abs(b-a) < Math.abs(RELERROR * a)) {
-            val = invert ? 1.0/a : a;
-            return(1);
+            roots[counter] = invert ? 1.0/a : a;
+            return 1;
         }
 
         lfx = fx;
@@ -131,21 +135,21 @@ function modrf_pos(ord, coef, a, b, val, invert) {
 
     // Evaluate the true values at a and b
     if (invert) {
-        fb = fa = scoef;
+        fb = fa = coef[scoef];
         for (fp = scoef + 1; fp <= ecoef; fp++) {
-            fa = a * fa + fp;
-            fb = b * fb + fp;
+            fa = a * fa + coef[fp];
+            fb = b * fb + coef[fp];
         }
     }
     else {
-        fb = fa = ecoef;
+        fb = fa = coef[ecoef];
         for (fp = ecoef - 1; fp >= scoef; fp--){
-            fa = a * fa + fp;
-            fb = b * fb + fp;
+            fa = a * fa + coef[fp];
+            fb = b * fb + coef[fp];
         }
     }
 
-    return(0);
+    return 0;
 }
 
 /*---------------------------------------------------------------------------
@@ -157,14 +161,14 @@ function modrf_pos(ord, coef, a, b, val, invert) {
  * if it can't converge.
  *--------------------------------------------------------------------------*/
 
-function modrf (ord, coef, a, b, val) {
+function modrf (ord, coef, a, b, roots, counter) {
      // This is an interfact to modrf that takes account of different cases
      // The idea is that the basic routine works badly for polynomials on
      // intervals that extend well beyond [-1, 1], because numbers get too large
 
      let fp;
-     let scoef = coef;
-     let ecoef = coef[ord];
+     let scoef = 0;
+     let ecoef = ord;
      const invert = 1;
 
      let fp1= 0.0, fm1 = 0.0; // Values of function at 1 and -1
@@ -178,46 +182,46 @@ function modrf (ord, coef, a, b, val) {
      }
 
      // The normal case, interval is inside [-1, 1]
-     if (b <= 1.0 && a >= -1.0) return modrf_pos (ord, coef, a, b, val, !invert);
+     if (b <= 1.0 && a >= -1.0) return modrf_pos (ord, coef, a, b, roots, !invert, counter);
 
      // The case where the interval is outside [-1, 1]
      if (a >= 1.0 || b <= -1.0)
-     return modrf_pos (ord, coef, a, b, val, invert);
+     return modrf_pos (ord, coef, a, b, roots, invert, counter);
 
      // If we have got here, then the interval includes the points 1 or -1.
      // In this case, we need to evaluate at these points
 
      // Evaluate the polynomial at the end points
      for (fp = ecoef - 1; fp >= scoef; fp--) {
-         fp1 = fp + fp1;
-         fm1 = fp - fm1;
-         fa = a * fa + fp;
-         fb = b * fb + fp;
+         fp1 = coef[fp] + fp1;
+         fm1 = coef[fp] - fm1;
+         fa = a * fa + coef[fp];
+         fb = b * fb + coef[fp];
      }
 
      // Then there is the case where the interval contains -1 or 1
      if (a < -1.0 && b > 1.0) {
          // Interval crosses over 1.0, so cut
          if (fa * fm1 < 0.0)      // The solution is between a and -1
-         return modrf_pos (ord, coef, a, -1.0, val, invert);
+         return modrf_pos (ord, coef, a, -1.0, roots, invert, counter);
          else if (fb * fp1 < 0.0) // The solution is between 1 and b
-         return modrf_pos (ord, coef, 1.0, b, val, invert);
+         return modrf_pos (ord, coef, 1.0, b, roots, invert, counter);
          else                     // The solution is between -1 and 1
-         return modrf_pos(ord, coef, -1.0, 1.0, val, !invert);
+         return modrf_pos(ord, coef, -1.0, 1.0, roots, !invert, counter);
      }
      else if (a < -1.0) {
          // Interval crosses over 1.0, so cut
          if (fa * fm1 < 0.0)      // The solution is between a and -1
-         return modrf_pos (ord, coef, a, -1.0, val, invert);
+         return modrf_pos (ord, coef, a, -1.0, roots, invert, counter);
          else                     // The solution is between -1 and b
-         return modrf_pos(ord, coef, -1.0, b, val, !invert);
+         return modrf_pos(ord, coef, -1.0, b, roots, !invert, counter);
      }
      else {
           // b > 1.0
          if (fb * fp1 < 0.0) // The solution is between 1 and b
-         return modrf_pos (ord, coef, 1.0, b, val, invert);
+         return modrf_pos (ord, coef, 1.0, b, roots, invert, counter);
          else                     // The solution is between a and 1
-         return modrf_pos(ord, coef, a, 1.0, val, !invert);
+         return modrf_pos(ord, coef, a, 1.0, roots, !invert, counter);
      }
 }
 
@@ -232,12 +236,8 @@ function modrf (ord, coef, a, b, val) {
 function modp(u, v, r) {
    let j, k;  /* Loop indices */
 
-   let nr = r.coef;
-   let end = u.coef[u.ord];
-
-   let uc = u.coef;
-   while (uc <= end) {
-       nr++ = uc++;
+   for(let uc = 0; uc <= u.ord; uc++) {
+       r.coef[uc] = u.coef[uc];
    }
 
    if (v.coef[v.ord] < 0.0) {
@@ -247,8 +247,7 @@ function modp(u, v, r) {
 
       for (k = u.ord - v.ord; k >= 0; k--)
          for (j = v.ord + k - 1; j >= k; j--)
-            r.coef[j] = -r.coef[j] - r.coef[v.ord + k]
-         * v.coef[j - k];
+            r.coef[j] = -r.coef[j] - r.coef[v.ord + k] * v.coef[j - k];
       } else {
          for (k = u.ord - v.ord; k >= 0; k--)
             for (j = v.ord + k - 1; j >= k; j--)
@@ -263,7 +262,7 @@ function modp(u, v, r) {
 
    r.ord = (k < 0) ? 0 : k;
 
-   return(r.ord);
+   return r.ord;
 }
 
 /*---------------------------------------------------------------------------
@@ -282,24 +281,30 @@ function buildsturm(ord, sseq) {
        let i;    // Loop index
        let sp;
        let f = Math.abs(sseq[0].coef[ord] * ord);
-       let fp = sseq[1].coef;
-       let fc = sseq[0].coef + 1;
+       let fp = 0;
 
-       for (i=1; i<=ord; i++)
-       fp++ = fc++ * i / f;
+       for (i = 1; i <= ord; i++) {
+           sseq[1].coef[fp] = sseq[1].coef[fp + 1] * i / f;
+           fp++;
+       }
 
+       let counter = 2;
        /* construct the rest of the Sturm sequence */
-       for (sp = sseq + 2; modp(sp - 2, sp - 1, sp); sp++) {
+       for (sp = sseq[counter]; modp(sp - 2, sp - 1, sp); counter++) {
 
            /* reverse the sign and normalise */
            f = -Math.abs(sp.coef[sp.ord]);
-           for (fp = sp.coef[sp.ord]; fp >= sp.coef; fp--)
-           fp /= f;
+
+           for (fp = sp.ord; fp >= 0; fp--) {
+               sp.coef[fp] /= f;
+           }
+
+           sp = sseq[counter];
        }
 
        sp.coef[0] = -sp.coef[0]; /* reverse the sign */
 
-       return(sp - sseq);
+       return counter;
    }
 }
 
@@ -315,15 +320,14 @@ function numchanges(np, sseq, a) {
 
    let lf = evalpoly(sseq[0].ord, sseq[0].coef, a);
 
-   let s;
-   for (s = sseq + 1; s <= sseq + np; s++) {
-       let f = evalpoly(s.ord, s.coef, a);
+   for (let s = 1; s <= np; s++) {
+       let f = evalpoly(sseq[s].ord, sseq[s].coef, a);
        if (lf == 0.0 || lf * f < 0)
        changes++;
        lf = f;
    }
 
-   return(changes);
+   return changes;
 }
 
 /*---------------------------------------------------------------------------
@@ -332,7 +336,7 @@ function numchanges(np, sseq, a) {
  * return the number of distinct real roots of the polynomial described in sseq.
  *--------------------------------------------------------------------------*/
 
-function numroots(np, sseq, atneg, atpos, non_neg) {
+function numroots(np, sseq, non_neg) {
    let atposinf = 0;
    let atneginf = 0;
 
@@ -340,40 +344,41 @@ function numroots(np, sseq, atneg, atpos, non_neg) {
    let f;
    let lf = sseq[0].coef[sseq[0].ord];
 
-   let s;
-   for (s = sseq + 1; s <= sseq + np; s++) {
-      f = s.coef[s.ord];
-      if (lf == 0.0 || lf * f < 0)
-         atposinf++;
-      lf = f;
-    }
+   let s = 1;
+
+   for (s = 1; s <= np; s++) {
+       f = sseq[s].coef[sseq[s].ord];
+       if (lf == 0.0 || lf * f < 0) {
+           atposinf++;
+       }
+       lf = f;
+   }
 
    // changes at negative infinity or zero
-   if (non_neg)
-      atneginf = numchanges(np, sseq, 0.0);
-
-   else
-      {
+   if (non_neg) {
+       atneginf = numchanges(np, sseq, 0.0);
+   } else {
       if (sseq[0].ord & 1)
          lf = -sseq[0].coef[sseq[0].ord];
       else
          lf = sseq[0].coef[sseq[0].ord];
 
-      for (s = sseq + 1; s <= sseq + np; s++) {
-         if (s.ord & 1)
-            f = -s.coef[s.ord];
+      for (let s = 1; s <= np; s++) {
+         if (sseq[s].ord & 1)
+            f = -sseq[s].coef[sseq[s].ord];
          else
-            f = s.coef[s.ord];
+            f = sseq[s].coef[sseq[s].ord];
          if (lf == 0.0 || lf * f < 0)
             atneginf++;
          lf = f;
          }
       }
 
-   atneg = atneginf;
-   atpos = atposinf;
-
-   return(atneginf - atposinf);
+   return {
+       nroots: atneginf - atposinf,
+       atmin: atneginf,
+       atmax: atposinf,
+   };
 }
 
 
@@ -385,17 +390,17 @@ function numroots(np, sseq, atneg, atpos, non_neg) {
  * the roots are returned in the roots array in order of magnitude.
  *--------------------------------------------------------------------------*/
 
-function sbisect(np, sseq, min, max, atmin, atmax, roots) {
+function sbisect(np, sseq, min, max, atmin, atmax, roots, counter) {
    let mid;
    let atmid;
    let its;
-   let  n1 = 0, n2 = 0;
+   let n1 = 0, n2 = 0;
    let nroot = atmin - atmax;
 
    if (nroot == 1) {
 
        /* first try a less expensive technique.  */
-       if (modrf(sseq.ord, sseq.coef, min, max, &roots[0]))
+       if (modrf(sseq.ord, sseq.coef, min, max, roots, counter))
        return 1;
 
        /*
@@ -439,8 +444,8 @@ function sbisect(np, sseq, min, max, atmin, atmax, roots) {
       n2 = atmid - atmax;
 
       if (n1 != 0 && n2 != 0) {
-          sbisect(np, sseq, min, mid, atmin, atmid, roots);
-          sbisect(np, sseq, mid, max, atmid, atmax, &roots[n1]);
+          sbisect(np, sseq, min, mid, atmin, atmid, roots, counter);
+          sbisect(np, sseq, mid, max, atmid, atmax, roots, n1);
           break;
       }
 
@@ -458,15 +463,17 @@ function sbisect(np, sseq, min, max, atmin, atmax, roots) {
    return 1;
 }
 
-function find_real_roots_sturm(p, order, roots, nroots, non_neg) {
+function find_real_roots_sturm(p, order, roots, non_neg) {
            /*
            * finds the roots of the input polynomial.  They are returned in roots.
            * It is assumed that roots is already allocated with space for the roots.
            */
-
-           let sseq[Maxdegree+1];
-           let  min, max;
-           let  i, nchanges, np, atmin, atmax;
+           let sseq = [];
+           for(let temp = 0; temp < Maxdegree+1; temp++) {
+               sseq.push(new poly());
+           }
+           let min, max;
+           let i, nchanges, np;
 
            // Copy the coefficients from the input p.  Normalize as we go
            let norm = 1.0 / p[order];
@@ -489,11 +496,10 @@ function find_real_roots_sturm(p, order, roots, nroots, non_neg) {
            /* build the Sturm sequence */
            np = buildsturm(order, sseq);
            // get the number of real roots
-           nroots = numroots(np, sseq, &atmin, &atmax, non_neg);
+           let { nroots, atmin, atmax } = numroots(np, sseq, non_neg);
 
            if (nroots == 0) {
-               // fprintf(stderr, "solve: no real roots\n");
-               return 0 ;
+               return nroots;
            }
 
            /* calculate the bracket that the roots live in */
@@ -532,5 +538,5 @@ function find_real_roots_sturm(p, order, roots, nroots, non_neg) {
                roots[i] /= fac;
            }
 
-           return 1;
+           return nroots;
 }
