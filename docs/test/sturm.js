@@ -7,7 +7,7 @@ const SMALL_ENOUGH = 1.0e-12;   /* a coefficient smaller than SMALL_ENOUGH
 /* structure type for representing a polynomial */
 function poly() {
     this.order;
-    this.coef = [Maxdegree + 1];
+    this.coef = [];
 }
 
 /*---------------------------------------------------------------------------
@@ -284,21 +284,21 @@ function buildsturm(ord, sseq) {
        let fp = 0;
 
        for (i = 1; i <= ord; i++) {
-           sseq[1].coef[fp] = sseq[1].coef[fp + 1] * i / f;
+           sseq[1].coef[fp] = sseq[0].coef[fp + 1] * i / f;
            fp++;
        }
 
        let counter = 2;
+       sp = sseq[counter]
        /* construct the rest of the Sturm sequence */
-       for (sp = sseq[counter]; modp(sp - 2, sp - 1, sp); counter++) {
-
+       while(modp(sseq[counter - 2], sseq[counter - 1], sp)) {
            /* reverse the sign and normalise */
            f = -Math.abs(sp.coef[sp.ord]);
 
            for (fp = sp.ord; fp >= 0; fp--) {
                sp.coef[fp] /= f;
            }
-
+           counter++;
            sp = sseq[counter];
        }
 
@@ -400,7 +400,7 @@ function sbisect(np, sseq, min, max, atmin, atmax, roots, counter) {
    if (nroot == 1) {
 
        /* first try a less expensive technique.  */
-       if (modrf(sseq.ord, sseq.coef, min, max, roots, counter))
+       if (modrf(sseq[0].ord, sseq[0].coef, min, max, roots, counter))
        return 1;
 
        /*
@@ -437,7 +437,7 @@ function sbisect(np, sseq, min, max, atmin, atmax, roots, counter) {
    /* more than one root in the interval, we have to bisect */
    for (its = 0; its < MAXIT; its++) {
 
-      mid = (double) ((min + max) / 2);
+      mid = (min + max) / 2;
       atmid = numchanges(np, sseq, mid);
 
       n1 = atmin - atmid;
@@ -531,7 +531,7 @@ function find_real_roots_sturm(p, order, roots, non_neg) {
            nroots = atmin - atmax;
 
            /* perform the bisection */
-           sbisect(np, sseq, min, max, atmin, atmax, roots);
+           sbisect(np, sseq, min, max, atmin, atmax, roots, 0);
 
            /* Finally, reorder the roots */
            for (i=0; i < nroots; i++) {

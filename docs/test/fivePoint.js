@@ -486,10 +486,11 @@ function EEeqns_5pt (E, A) {
     }
 }
 
-function null_space_solve2(A, x, y) {
+function null_space_solve2(A) {
     // Solve for the null-space of the matrix
 
     // This time we will do pivoting
+    let x,y;
     let p1;
     let f0 = Math.abs(A[0][2]), f1 = Math.abs(A[1][2]), f2 = Math.abs(A[2][2]);
     if (f0 > f1) p1 = (f0>f2)? 0 : 2;
@@ -513,6 +514,11 @@ function null_space_solve2(A, x, y) {
     // Now, read off the values - back substitution
     x = - A[p2][0] / A[p2][1];
     y = -(A[p1][0] + A[p1][1]*x) / A[p1][2];
+
+    return {
+        x,
+        y,
+    };
 }
 
 function null_space_solve1(A, E) {
@@ -824,8 +830,7 @@ function compute_E_matrix (Es, A, w, E) {
     }
 
     // Now, find the solution
-    let x, y;
-    null_space_solve2(M, x, y);
+    let {x, y} = null_space_solve2(M);
 
     // Multiply out the solution to get the essential matrix
     for (let i=0; i<3; i++) {
@@ -837,6 +842,10 @@ function compute_E_matrix (Es, A, w, E) {
 }
 
 function compute_E_matrices(pts1, pts2) {
+    let Ematrices = [];
+    for(let i = 0; i < 10; i++) {
+        Ematrices[i] = createMatrix(3, 3);
+    }
     // Get the matrix set
     const A = createMatrix(5, 10, 10);
     const E = createMatrix(3, 3, 4);
@@ -855,7 +864,7 @@ function compute_E_matrices(pts1, pts2) {
 
     // Now, get the ematrices
     for (let i = 0; i < nroots; i++) {
-        compute_E_matrix (E, A, roots[i], Ematrices[i]);
+        compute_E_matrix(E, A, roots[i], Ematrices[i]);
     }
 
     return nroots;
