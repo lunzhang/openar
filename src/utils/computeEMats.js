@@ -408,10 +408,10 @@ function mono_coeff(B, A, n) {
     A[w0][n][xx] = B[x][x][z];
     A[w0][n][yy] = B[y][y][z];
     A[w0][n][xy] = B[x][y][z];
-    A[w0][n][xx] = B[x][x][x];
-    A[w0][n][xx] = B[x][x][y];
-    A[w0][n][xy] = B[x][y][y];
-    A[w0][n][yy] = B[y][y][y];
+    A[w0][n][xxx] = B[x][x][x];
+    A[w0][n][xxy] = B[x][x][y];
+    A[w0][n][xyy] = B[x][y][y];
+    A[w0][n][yyy] = B[y][y][y];
 
     // Terms in w^1
     A[w1][n][0] = B[w][z][z];
@@ -462,15 +462,13 @@ function EEeqns_5pt (E, A) {
             EEE_i.push(createMatrix(4, 4, 4));
         }
 
-        for (let j=0; j<3; j++) clearMatrix(EEE_i[j]);
-
         // Compute each EE'(i,q) = sum_p E(i,p) E(q,p)
         for (let q=0; q<3; q++) {
             // Accumulate EE(i, q)
             const EE_iq = createMatrix(4, 4);
 
             for (let p=0; p<3; p++) {
-                add4_2By4_2(EE_iq, multi4_1By4_1(E[i][p], E[q][p]));
+                add4_2To4_2(EE_iq, multi4_1By4_1(E[i][p], E[q][p]));
             }
 
             // Now, accumulate EEE(ij) = sum_q  EE'(i,q) * E(q, j)
@@ -488,10 +486,11 @@ function EEeqns_5pt (E, A) {
     }
 }
 
-function null_space_solve2(A, x, y) {
+function null_space_solve2(A) {
     // Solve for the null-space of the matrix
 
     // This time we will do pivoting
+    let x,y;
     let p1;
     let f0 = Math.abs(A[0][2]), f1 = Math.abs(A[1][2]), f2 = Math.abs(A[2][2]);
     if (f0 > f1) p1 = (f0>f2)? 0 : 2;
@@ -515,6 +514,11 @@ function null_space_solve2(A, x, y) {
     // Now, read off the values - back substitution
     x = - A[p2][0] / A[p2][1];
     y = -(A[p1][0] + A[p1][1]*x) / A[p1][2];
+
+    return {
+        x,
+        y,
+    };
 }
 
 function null_space_solve1(A, E) {
@@ -778,18 +782,6 @@ function reduce_Ematrix(A) {
     }
 }
 
-function reduce_constant_terms (A) {
-    // This reduces the equation set to 6 x 6 by eliminating the
-    // constant terms at the end.  In this
-    // no pivoting, which relies on the pivots to be non-zero.
-
-    // Sweeping out the constant terms to reduce to 6 x 6
-    pivot (A, 9, 0, 8); sweep_up (A, 9, 9, 0);
-    pivot (A, 8, 0, 7); sweep_up (A, 8, 8, 0);
-    pivot (A, 7, 0, 6); sweep_up (A, 7, 7, 0);
-    pivot (A, 6, 0, 5); sweep_up (A, 6, 6, 0);
-}
-
 function one_cofactor (A, poly, r0,  r1,  r2) {
     // Computes one term of the 3x3 cofactor expansion
 
@@ -813,9 +805,6 @@ function one_cofactor (A, poly, r0,  r1,  r2) {
 
 function compute_determinant (A, poly) {
     // Does the final determinant computation to return the determinant
-
-    // Clear out the polynomial
-    clearMatrix(poly);
 
     // Now, the three cofactors
     one_cofactor(A, poly, 0, 1, 2);
@@ -841,8 +830,7 @@ function compute_E_matrix (Es, A, w, E) {
     }
 
     // Now, find the solution
-    let x, y;
-    null_space_solve2(M, x, y);
+    let {x, y} = null_space_solve2(M);
 
     // Multiply out the solution to get the essential matrix
     for (let i=0; i<3; i++) {
@@ -853,7 +841,11 @@ function compute_E_matrix (Es, A, w, E) {
     }
 }
 
-function compute_E_matrices(pts1, pts2) {
+function computeEMats(pts1, pts2) {
+    let Ematrices = [];
+    for(let i = 0; i < 10; i++) {
+        Ematrices[i] = createMatrix(3, 3);
+    }
     // Get the matrix set
     const A = createMatrix(5, 10, 10);
     const E = createMatrix(3, 3, 4);
@@ -872,6 +864,11 @@ function compute_E_matrices(pts1, pts2) {
 
     // Now, get the ematrices
     for (let i = 0; i < nroots; i++) {
-        compute_E_matrix (E, A, roots[i], Ematrices[i]);
+        compute_E_matrix(E, A, roots[i], Ematrices[i]);
     }
+
+    return {
+        nroots,
+        Ematrices,
+    };
 }
