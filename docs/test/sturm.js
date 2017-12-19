@@ -408,7 +408,7 @@ function sbisect(np, sseq, min, max, atmin, atmax, roots, counter) {
        * way by using the Sturm sequence.
        */
        for (its = 0; its < MAXIT; its++) {
-           mid = (double) ((min + max) / 2);
+           mid = (min + max) / 2;
            atmid = numchanges(np, sseq, mid);
 
            if (Math.abs(mid) > RELERROR) {

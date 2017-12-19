@@ -49,6 +49,10 @@ function decomposeRotationMatrix(matrix) {
     };
 }
 
+function decomposeTranslationMatrix(matrix) {
+    return [matrix[2], matrix[5], matrix[8]];
+}
+
 /**
 * Calculates the rotation and translation from an essential matrix
 * E = U * D * V after svd
@@ -86,7 +90,7 @@ function recoverPose(essentialMatrix) {
 
     return {
         rotation: decomposeRotationMatrix(R.data),
-        translation: T.data,
+        translation: decomposeTranslationMatrix(U.data),
     };
 }
 
