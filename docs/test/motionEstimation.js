@@ -53,7 +53,7 @@ function decomposeTranslationMatrix(matrix) {
     return {
         x: matrix[2],
         y: matrix[5],
-        z: matrix[8]],
+        z: matrix[8],
     };
 }
 

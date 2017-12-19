@@ -541,6 +541,10 @@ function null_space_solve1(A, E) {
         const row = col-firstcol;	// Row to pivot around
         const pivot = A[row][col];
 
+        if (pivot === 0) {
+            return false;
+        }
+
         // Sweep out all rows up to the current one
         for (let i=0; i<row; i++) {
             // This factor of the pivot row is to subtract from row i
@@ -559,6 +563,10 @@ function null_space_solve1(A, E) {
         // Remove column col
         const row = col-firstcol;	// Row to pivot around
         const pivot = A[row][col];
+
+        if (pivot === 0) {
+            return false;
+        }
 
         // Sweep out all rows up to the current one
         for (let i=row+1; i<=lastrow; i++)
@@ -588,6 +596,8 @@ function null_space_solve1(A, E) {
     E[2][1] = [fac*A[3][0], fac*A[3][1], fac*A[3][2], fac*A[3][3]];
     fac = -1.0/A[4][8];
     E[2][2] = [fac*A[4][0], fac*A[4][1], fac*A[4][2], fac*A[4][3]];
+
+    return true;
 }
 
 function Ematrix_5pt(q, qp, E, A) {
@@ -610,9 +620,13 @@ function Ematrix_5pt(q, qp, E, A) {
     }
 
     // Solve using null_space_solve
-    null_space_solve1(M, E);
+    if(!null_space_solve1(M, E)) {
+        return false;
+    }
 
     EEeqns_5pt(E, A);
+
+    return true;
 }
 
 function sweep_up (A, row, col, degree) {
@@ -846,10 +860,18 @@ function computeEMats(pts1, pts2) {
     for(let i = 0; i < 10; i++) {
         Ematrices[i] = createMatrix(3, 3);
     }
+
+    let nroots = 0;
     // Get the matrix set
     const A = createMatrix(5, 10, 10);
     const E = createMatrix(3, 3, 4);
-    Ematrix_5pt(pts1, pts2, E, A);
+
+    if(!Ematrix_5pt(pts1, pts2, E, A)) {
+        return {
+            nroots,
+            Ematrices,
+        };
+    };
 
     // Now, reduce its dimension to 3 x 3
     reduce_Ematrix(A);
@@ -860,7 +882,7 @@ function computeEMats(pts1, pts2) {
 
     // Find the roots
     const roots = createMatrix(PolynomialDegree);
-    const nroots = find_real_roots_sturm(poly, PolynomialDegree, roots);
+    nroots = find_real_roots_sturm(poly, PolynomialDegree, roots);
 
     // Now, get the ematrices
     for (let i = 0; i < nroots; i++) {

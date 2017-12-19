@@ -54,7 +54,11 @@ function decomposeRotationMatrix(matrix) {
 }
 
 function decomposeTranslationMatrix(matrix) {
-    return [matrix[2], matrix[5], matrix[8]];
+    return {
+        x: matrix[2],
+        y: matrix[5],
+        z: matrix[8],
+    };
 }
 
 /**
