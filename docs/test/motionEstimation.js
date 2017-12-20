@@ -123,15 +123,14 @@ function motionEstimation(prevFrame, currentFrame, width, height) {
         featuresCount, 15, 30, status, 0.01, 0.0001,
     );
 
-    // ransac with homography
-    const ransac = jsfeat.motion_estimator.ransac;
     // create homography kernel
-    const homo_kernel = new jsfeat.motion_model.homography2d();
     const essentialMatrix = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
-    const params = new jsfeat.ransac_params_t(4, 3, 0.5, 0.99);
-    const mask = new jsfeat.matrix_t(featuresCount, 1, jsfeat.U8_t | jsfeat.C1_t);
-    // convert status to matrix format
-    copyArray(status, mask.data);
+
+    // returns 3x3 matrix
+    const eMatrix = computeEssential(prevFeatures, currentFeatures);
+
+    // convert to matrix_t format
+    essentialMatrix.data = eMatrix[0].concat(eMatrix[1].concat(eMatrix[2]));
 
     // return rotation and translation calculated from essentialMatrix
     return recoverPose(essentialMatrix);

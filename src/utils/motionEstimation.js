@@ -1,5 +1,5 @@
 import jsfeat from 'jsfeat';
-import computeEMats from './computeEMats';
+import computeEssential from './computeEssential';
 
 jsfeat.fast_corners.set_threshold(20);
 
@@ -132,7 +132,11 @@ function motionEstimation(prevFrame, currentFrame, width, height) {
     // create homography kernel
     const essentialMatrix = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
 
-    computeEMats(prevFeatures, currentFeatures);
+    // returns 3x3 matrix
+    const eMatrix = computeEssential(prevFeatures, currentFeatures);
+
+    // convert to matrix_t format
+    essentialMatrix.data = eMatrix[0].concat(eMatrix[1].concat(eMatrix[2]));
 
     // return rotation and translation calculated from essentialMatrix
     return recoverPose(essentialMatrix);

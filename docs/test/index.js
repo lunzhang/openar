@@ -109,35 +109,20 @@ function normalizeYCoord(yCoord) {
 function calculateCameraPose(frame1Feat, frame2Feat, featuresCount, status) {
     var text = document.getElementById('camera-pose');
 
-    // ransac with 8 point algorithm
-    var ransac = jsfeat.motion_estimator.ransac;
-    // create homography kernel
-    var homo_kernel = new jsfeat.motion_model.homography2d();
     var essentialMatrix = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
-    var params = new jsfeat.ransac_params_t(4, 3, 0.5, 0.99);
 
-    var mask = new jsfeat.matrix_t(featuresCount, 1, jsfeat.U8_t | jsfeat.C1_t);
-    copyArray(status, mask.data);
-
-    let q = [];
-    let qp = [];
-    for (let i = 0; i < 5; i++) {
-        q.push([]);
-        qp.push([]);
-        q[i].push(normalizeXCoord(frame1Feat[i * 20]));
-        q[i].push(normalizeYCoord(frame1Feat[i * 20 + 1]));
-        qp[i].push(normalizeXCoord(frame2Feat[i * 20]));
-        qp[i].push(normalizeYCoord(frame2Feat[i * 20 + 1]));
+    // removed none detected frames
+    for (let i = 0; i < status.length; i++) {
+        if (status[i] === 0) {
+            frame1Feat.splice(i * 2 + 1);
+            frame1Feat.splice(i * 2);
+            frame2Feat.splice(i * 2 + 1);
+            frame2Feat.splice(i * 2);
+        }
     }
 
-    let { Ematrices, nroots } = computeEMats(q, qp);
+    computeEssential(frame1Feat, frame2Feat, status);
 
-    for(let i = 0; i < nroots; i++) {
-        var essentialMatrix = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
-        essentialMatrix.data = Ematrices[i];
-        var pose = recoverPose(essentialMatrix);
-        console.log(pose.rotation);
-    }
     // text.innerHTML = 'Rotation X: ' + pose.rotation.x + '\n';
     // text.innerHTML += 'Rotation Y: ' + pose.rotation.y + '\n';
     // text.innerHTML += 'Rotation Z: ' + pose.rotation.z + '\n';
