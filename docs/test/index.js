@@ -134,21 +134,16 @@ function calculateCameraPose(frame1Feat, frame2Feat, featuresCount, status) {
 
     for(let i = 0; i < nroots; i++) {
         var essentialMatrix = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
-        for(let j = 0; j < 3; j++) {
-            for(let k = 0; k < 3; k++) {
-                essentialMatrix.data[j * 3 + k] = Ematrices[i][j][k];
-            }
-        }
+        essentialMatrix.data = Ematrices[i];
         var pose = recoverPose(essentialMatrix);
         console.log(pose.rotation);
     }
-
-    text.innerHTML = 'Rotation X: ' + pose.rotation.x + '\n';
-    text.innerHTML += 'Rotation Y: ' + pose.rotation.y + '\n';
-    text.innerHTML += 'Rotation Z: ' + pose.rotation.z + '\n';
-    text.innerHTML += 'Translation X: ' + pose.translation.x + '\n';
-    text.innerHTML += 'Translation Y: ' + pose.translation.y + '\n';
-    text.innerHTML += 'Translation Z: ' + pose.translation.z + '\n';
+    // text.innerHTML = 'Rotation X: ' + pose.rotation.x + '\n';
+    // text.innerHTML += 'Rotation Y: ' + pose.rotation.y + '\n';
+    // text.innerHTML += 'Rotation Z: ' + pose.rotation.z + '\n';
+    // text.innerHTML += 'Translation X: ' + pose.translation.x + '\n';
+    // text.innerHTML += 'Translation Y: ' + pose.translation.y + '\n';
+    // text.innerHTML += 'Translation Z: ' + pose.translation.z + '\n';
 }
 
 // Draw image 2 first

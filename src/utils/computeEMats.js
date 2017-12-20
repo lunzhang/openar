@@ -1,3 +1,5 @@
+import find_real_roots_sturm from './hidden6';
+
 // Degree of the polynomial
 const PolynomialDegree = 10;
 
@@ -894,3 +896,5 @@ function computeEMats(pts1, pts2) {
         Ematrices,
     };
 }
+
+export default computeEMats;

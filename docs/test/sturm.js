@@ -3,6 +3,7 @@ const MAXPOW = 32;        /* max power of 10 we wish to search to */
 const MAXIT = 800;       /* max number of iterations */
 const SMALL_ENOUGH = 1.0e-12;   /* a coefficient smaller than SMALL_ENOUGH
                                  * is considered to be zero (0.0). */
+const Maxdegree = 20;
 
 /* structure type for representing a polynomial */
 function poly() {
