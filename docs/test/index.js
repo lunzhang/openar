@@ -1,6 +1,3 @@
-const IMAGE_WIDTH = 150;
-const IMAGE_HEIGHT = 150;
-
 // Draw image to canvas
 function addImage(canvasId, imageSrc) {
     return new Promise(function(res, rej) {
@@ -92,18 +89,6 @@ function detectAndTrackFeatures(canvas1Id, canvas2Id, frame1, frame2) {
         res({frame1Feat, frame2Feat, featuresCount, status});
     });
 }
-
-function normalizeXCoord(xCoord) {
-    const Xcoordinate = 2 * xCoord / IMAGE_WIDTH - 1;
-
-    return Xcoordinate;
-};
-
-function normalizeYCoord(yCoord) {
-    const Ycoordinate = 2 * yCoord / IMAGE_HEIGHT - 1;
-
-    return Ycoordinate;
-};
 
 // calculate camera pose using frame features
 function calculateCameraPose(frame1Feat, frame2Feat, featuresCount, status) {

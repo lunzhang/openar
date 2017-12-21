@@ -855,7 +855,7 @@ function compute_E_matrix (Es, A, w, E) {
     }
 }
 
-function computeEMats(pts1, pts2) {
+function compute_e_matrices(pts1, pts2) {
     let Ematrices = [];
     for(let i = 0; i < 10; i++) {
         Ematrices[i] = createMatrix(3, 3);
