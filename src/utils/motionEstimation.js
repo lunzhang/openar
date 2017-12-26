@@ -1,5 +1,5 @@
 import jsfeat from 'jsfeat';
-import computeEssential from './computeEssential';
+import computeEssential from './5point/computeEssential';
 
 jsfeat.fast_corners.set_threshold(20);
 

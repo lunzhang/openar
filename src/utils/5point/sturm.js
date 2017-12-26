@@ -445,7 +445,7 @@ function sbisect(np, sseq, min, max, atmin, atmax, roots, counter) {
 
       if (n1 != 0 && n2 != 0) {
           sbisect(np, sseq, min, mid, atmin, atmid, roots, counter);
-          sbisect(np, sseq, mid, max, atmid, atmax, roots, n1);
+          sbisect(np, sseq, mid, max, atmid, atmax, roots, counter + n1);
           break;
       }
 

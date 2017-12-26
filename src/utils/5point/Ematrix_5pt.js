@@ -1,4 +1,3 @@
-import find_real_roots_sturm from './hidden6';
 
 // Degree of the polynomial
 const PolynomialDegree = 10;
