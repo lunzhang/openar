@@ -1,3 +1,4 @@
+import find_real_roots_sturm from './sturm';
 
 // Degree of the polynomial
 const PolynomialDegree = 10;
