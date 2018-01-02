@@ -1,3 +1,8 @@
+/**
+*   Javascript version of 5 point made easy
+*   Source code converted from http://users.cecs.anu.edu.au/~hongdong/Publications.html
+**/
+
 import find_real_roots_sturm from './sturm';
 
 // Degree of the polynomial
