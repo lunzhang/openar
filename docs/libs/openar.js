@@ -88,7 +88,7 @@ var _ARView = __webpack_require__(2);
 
 var _ARView2 = _interopRequireDefault(_ARView);
 
-var _ARDebugger = __webpack_require__(6);
+var _ARDebugger = __webpack_require__(9);
 
 var _ARDebugger2 = _interopRequireDefault(_ARDebugger);
 
@@ -160,17 +160,13 @@ var ARView = function () {
         this.renderer.autoClear = false;
 
         this.sceneCamera = camera;
-        this.cameraOrientation = null;
-        this.cameraMotion = null;
         this.prevFrame = null;
 
         this.scene = new THREE.Scene();
-        this.loaded = false;
         this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1);
         this.camera.position.z = 1;
 
         this.init();
-        this.initListeners();
     }
 
     /**
@@ -199,59 +195,9 @@ var ARView = function () {
 
             var material = new THREE.SpriteMaterial({ map: this.videoTexture });
 
-            // testing without webcam
-            // const map = new THREE.TextureLoader().load("./pulpitrock.jpg", () => {
-            //     this.loaded = true;
-            // });
-            // const material = new THREE.SpriteMaterial({ map: map });
-
             this.screen = new THREE.Sprite(material);
             this.screen.scale.set(2, 2);
             this.scene.add(this.screen);
-        }
-    }, {
-        key: 'initListeners',
-        value: function initListeners() {
-            window.addEventListener('deviceorientation', this.handleOrientation.bind(this));
-            window.addEventListener('devicemotion', this.handleMotion.bind(this));
-        }
-
-        // keep virutal world rotation in sync with real world
-
-    }, {
-        key: 'handleOrientation',
-        value: function handleOrientation(e) {
-            if (this.cameraOrientation !== null) {
-                // get difference in orientation since last update
-                // rotate around
-                var diffZ = e.alpha - this.cameraOrientation.alpha;
-                // rotate up/down
-                var diffX = e.beta - this.cameraOrientation.beta;
-                // rotate left/right
-                var diffY = e.gamma - this.cameraOrientation.gamma;
-
-                var rotationX = Math.cos(diffZ) * diffX + Math.sin(diffZ) * diffY;
-                var rotationY = Math.sin(diffZ) * diffX + Math.cos(diffZ) * diffY;
-
-                this.sceneCamera.rotation.x += rotationX;
-                this.sceneCamera.rotation.y += rotationY;
-            }
-
-            this.cameraOrientation = e;
-        }
-
-        // keep virtual world position in sync with real world
-
-    }, {
-        key: 'handleMotion',
-        value: function handleMotion(e) {
-            // if(this.cameraMotion !== null) {
-            //     this.camera.translateX(e.acceleration.x * 100);
-            //     this.camera.translateY(e.acceleration.y * 100);
-            //     this.camera.translateZ(e.acceleration.z * 100);
-            // }
-
-            this.cameraMotion = e;
         }
 
         // Clear renderer before and after rendering camera
@@ -262,18 +208,28 @@ var ARView = function () {
             this.renderer.clear();
             this.renderer.render(this.scene, this.camera);
             this.renderer.clearDepth();
-            if (this.loaded) this.processFrame();
+            this.processFrame();
         }
+
+        // Keeps real and virtual world in sync
+
     }, {
         key: 'processFrame',
         value: function processFrame() {
             var gl = renderer.context;
             var currentFrame = new Uint8Array(gl.drawingBufferWidth * gl.drawingBufferHeight * 4);
-            // read image data from gl
+
+            // Read image data from gl
             gl.readPixels(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight, gl.RGBA, gl.UNSIGNED_BYTE, currentFrame);
 
             if (this.prevFrame !== null) {
-                this.transform = (0, _index.motionEstimation)(this.prevFrame, currentFrame, gl.drawingBufferWidth, gl.drawingBufferHeight);
+                this.pose = (0, _index.motionEstimation)(this.prevFrame, currentFrame, gl.drawingBufferWidth, gl.drawingBufferHeight);
+                this.sceneCamera.rotation.x += pose.rotation.x;
+                this.sceneCamera.rotation.y += pose.rotation.y;
+                this.sceneCamera.rotation.z += pose.rotation.z;
+                this.sceneCamera.translation.x += pose.translation.x;
+                this.sceneCamera.translation.y += pose.translation.y;
+                this.sceneCamera.translation.z += pose.translation.z;
             }
 
             this.prevFrame = currentFrame;
@@ -320,61 +276,161 @@ var _jsfeat = __webpack_require__(5);
 
 var _jsfeat2 = _interopRequireDefault(_jsfeat);
 
+var _computeEssential = __webpack_require__(6);
+
+var _computeEssential2 = _interopRequireDefault(_computeEssential);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 _jsfeat2.default.fast_corners.set_threshold(20);
 
-// calculates the relative camera pose using two frames
-function motionEstimation(prevFrame, currentFrame, width, height) {
-    // allocate pyramid data structure for tracker
-    var currentPyramidT = new _jsfeat2.default.pyramid_t(3);
-    var prevPyramidT = new _jsfeat2.default.pyramid_t(3);
-    currentPyramidT.allocate(width, height, _jsfeat2.default.U8_t | _jsfeat2.default.C1_t);
-    prevPyramidT.allocate(width, height, _jsfeat2.default.U8_t | _jsfeat2.default.C1_t);
+/**
+* Converts frame to grayscale
+* @return pyramidT : pyramid_t
+*/
+function convertToGrayScale(frame, width, height) {
+    // allocate pyramid data structure for feature tracker
+    var pyramidT = new _jsfeat2.default.pyramid_t(3);
+    pyramidT.allocate(width, height, _jsfeat2.default.U8_t | _jsfeat2.default.C1_t);
 
-    // get greyscale version of previous and current frame
-    _jsfeat2.default.imgproc.grayscale(currentFrame, width, height, currentPyramidT.data[0], _jsfeat2.default.COLOR_RGBA2GRAY);
-    _jsfeat2.default.imgproc.grayscale(prevFrame, width, height, prevPyramidT.data[0], _jsfeat2.default.COLOR_RGBA2GRAY);
+    // get grayscale version of frames
+    _jsfeat2.default.imgproc.grayscale(frame, width, height, pyramidT.data[0], _jsfeat2.default.COLOR_RGBA2GRAY);
 
-    // build layers of pyramid
-    currentPyramidT.build(currentPyramidT.data[0], false);
-    prevPyramidT.build(prevPyramidT.data[0], false);
+    // build pyramid layers
+    pyramidT.build(pyramidT.data[0], false);
 
-    // initialize previous and current frame features
-    // detect features for previous frame only using fast algorithm
-    var currentCorners = [];
-    var prevCorners = [];
+    return pyramidT;
+}
+
+/**
+* Detect features in frame using fast algorithm
+* @return number of features detected
+*/
+function detectFeatures(frame, features, width, height) {
+    // detect features for frame
+    var tempFeatures = [];
     for (var i = 0; i < width * height; i++) {
-        prevCorners[i] = new _jsfeat2.default.keypoint_t();
+        tempFeatures[i] = new _jsfeat2.default.keypoint_t();
     }
-    var featuresCount = _jsfeat2.default.fast_corners.detect(prevPyramidT.data[0], prevCorners, 3);
+    var count = _jsfeat2.default.fast_corners.detect(frame.data[0], tempFeatures, 3);
 
-    // convert detected frames to array format
-    var prevCornersArray = [];
-    for (var _i = 0; _i < featuresCount; _i++) {
-        prevCornersArray.push(prevCorners[_i].x);
-        prevCornersArray.push(prevCorners[_i].y);
+    // add detected features to array
+    for (var _i = 0; _i < count; _i++) {
+        features.push(tempFeatures[_i].x);
+        features.push(tempFeatures[_i].y);
     }
+
+    return count;
+}
+
+/**
+* Converts a 3x3 rotation matrix in array format to x/y/z angles
+* Uses equation found here http://nghiaho.com/?page_id=846
+*/
+function decomposeRotationMatrix(matrix) {
+    return {
+        x: Math.atan2(matrix[7], matrix[8]),
+        y: Math.atan2(-matrix[6], Math.sqrt(Math.pow(matrix[7], 2) + Math.pow(matrix[8], 2))),
+        z: Math.atan2(matrix[3], matrix[0])
+    };
+}
+
+// Outputs the last second column of the matrix
+function decomposeTranslationMatrix(matrix) {
+    return {
+        x: matrix[2],
+        y: matrix[5],
+        z: matrix[8]
+    };
+}
+
+/**
+* Calculates the rotation and translation from an essential matrix
+* E = U * D * V after svd
+* R = U * Winvert * V
+* T = U * W * D * Ut
+*/
+function recoverPose(essentialMatrix) {
+    var D = new _jsfeat2.default.matrix_t(3, 3, _jsfeat2.default.F32_t | _jsfeat2.default.C1_t);
+    var U = new _jsfeat2.default.matrix_t(3, 3, _jsfeat2.default.F32_t | _jsfeat2.default.C1_t);
+    var V = new _jsfeat2.default.matrix_t(3, 3, _jsfeat2.default.F32_t | _jsfeat2.default.C1_t);
+    var W = new _jsfeat2.default.matrix_t(3, 3, _jsfeat2.default.F32_t | _jsfeat2.default.C1_t);
+    W.data[1] = -1;
+    W.data[3] = 1;
+    W.data[8] = 1;
+
+    // get inverse of W
+    var Winvert = new _jsfeat2.default.matrix_t(3, 3, _jsfeat2.default.F32_t | _jsfeat2.default.C1_t);
+    _jsfeat2.default.linalg.svd_invert(Winvert, W);
+
+    // rotation and translation matrices
+    var R = new _jsfeat2.default.matrix_t(3, 3, _jsfeat2.default.F32_t | _jsfeat2.default.C1_t);
+    var T = new _jsfeat2.default.matrix_t(3, 3, _jsfeat2.default.F32_t | _jsfeat2.default.C1_t);
+
+    // calculate SVD of essential matrix
+    _jsfeat2.default.linalg.svd_decompose(essentialMatrix, D, U, V);
+
+    // R = U * Winvert * V
+    _jsfeat2.default.matmath.multiply_3x3(R, U, Winvert);
+    _jsfeat2.default.matmath.multiply_3x3(R, R, V);
+
+    // T = U * W * D * Ut
+    _jsfeat2.default.matmath.multiply_3x3(T, U, W);
+    _jsfeat2.default.matmath.multiply_3x3(T, T, D);
+    _jsfeat2.default.matmath.multiply_ABt(T, T, U);
+
+    return {
+        rotation: decomposeRotationMatrix(R.data),
+        translation: decomposeTranslationMatrix(T.data)
+    };
+}
+
+/**
+* Calculates the relative camera pose using two frames
+* 1. Convert frames to grayscale
+* 2. Find feature in previous frame
+* 3. Map features in previous frame to current frame
+* 4. Use 8 point or 5 point algorithm to find Essential Matrix (Not Implemented)
+* 5. Compute R and T from essential matrix
+*/
+function motionEstimation(prevFrame, currentFrame, width, height) {
+    // convert frames to grayscale
+    var prevPyramidT = convertToGrayScale(prevFrame, width, height);
+    var currentPyramidT = convertToGrayScale(currentFrame, width, height);
+
+    var prevFeatures = [];
+    var currentFeatures = [];
+    // detect features for previous frame
+    var featuresCount = detectFeatures(prevPyramidT, prevFeatures, width, height);
 
     // klt tracker - tracks features in previous img and maps them to current
     var status = [];
-    _jsfeat2.default.optical_flow_lk.track(prevPyramidT, currentPyramidT, prevCornersArray, currentCorners, featuresCount, 15, 30, status, 0.01, 0.0001);
-
-    // this class allows you to use above Motion Kernels
-    // to estimate motion even with wrong correspondences
-    var ransac = _jsfeat2.default.motion_estimator.ransac;
+    _jsfeat2.default.optical_flow_lk.track(prevPyramidT, currentPyramidT, prevFeatures, currentFeatures, featuresCount, 15, 30, status, 0.01, 0.0001);
 
     // create homography kernel
-    // you can reuse it for different point sets
-    var homo_kernel = new _jsfeat2.default.motion_model.homography2d();
-    var transform = new _jsfeat2.default.matrix_t(3, 3, _jsfeat2.default.F32_t | _jsfeat2.default.C1_t);
+    var essentialMatrix = new _jsfeat2.default.matrix_t(3, 3, _jsfeat2.default.F32_t | _jsfeat2.default.C1_t);
 
-    var params = new _jsfeat2.default.ransac_params_t(4, 3, 0.5, 0.99);
+    // returns 3x3 matrix
+    var eMatrix = (0, _computeEssential2.default)(prevFeatures, currentFeatures);
 
-    var ok = ransac(params, homo_kernel, prevCornersArray, currentCorners, featuresCount, transform, status, 1000);
+    // convert to matrix_t format
+    essentialMatrix.data = eMatrix[0].concat(eMatrix[1].concat(eMatrix[2]));
 
-    return transform;
-};
+    // return rotation and translation calculated from essentialMatrix
+    return recoverPose(essentialMatrix);
+}
+
+// Convert array of coordinates to x, y in respect to i, i + 1
+function convertArrayToXY(array) {
+    var newArray = [];
+    for (var i = 0; i < array.length; i += 2) {
+        newArray.push({
+            x: array[i],
+            y: array[i + 1]
+        });
+    }
+    return newArray;
+}
 
 exports.default = motionEstimation;
 
@@ -5961,6 +6017,1604 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
+var _Ematrix_5pt = __webpack_require__(7);
+
+var _Ematrix_5pt2 = _interopRequireDefault(_Ematrix_5pt);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var MAX_ITERATIONS = 100;
+var MODEL_SIZE = 5;
+var PROBABILITY = 0.99;
+var focal = 800;
+var IMAGE_WIDTH = 150;
+var IMAGE_HEIGHT = 150;
+var cameraParams = [[focal, 0, IMAGE_WIDTH / 2], [0, focal, IMAGE_HEIGHT / 2], [0, 0, 1]];
+
+// nX = x - px / 2
+function normalizeXCoord(xCoord) {
+    var Xcoordinate = (xCoord - cameraParams[0][2]) / cameraParams[0][0];
+
+    return Xcoordinate;
+};
+
+// nY = y - py / 2
+function normalizeYCoord(yCoord) {
+    var Ycoordinate = (yCoord - cameraParams[1][2]) / cameraParams[1][1];
+
+    return Ycoordinate;
+};
+
+function computeEssential(feature1, feature2) {
+    var essentialMatrix = void 0;
+    var maxInliers = void 0;
+
+    var feats1 = [];
+    var feats2 = [];
+    for (var i = 0; i < feature1.length; i += 2) {
+        feats1.push(normalizeXCoord(feature1[i]));
+        feats1.push(normalizeYCoord(feature1[i + 1]));
+        feats2.push(normalizeXCoord(feature2[i]));
+        feats2.push(normalizeYCoord(feature2[i + 1]));
+    }
+
+    var iterations = 0;
+    while (iterations < MAX_ITERATIONS) {
+        var points1 = [];
+        var points2 = [];
+        var indexDict = {};
+
+        // Select 5 random points
+        for (var _i = 0; _i < 5; _i++) {
+            var index = Math.floor(Math.random() * (feature1.length / 2));
+
+            // avoid picking same points
+            while (indexDict[index]) {
+                index = Math.floor(Math.random() * (feature1.length / 2));
+            }
+
+            var point1 = [feats1[index * 2], feats1[index * 2 + 1]];
+            var point2 = [feats2[index * 2], feats2[index * 2 + 1]];
+            points1.push(point1);
+            points2.push(point2);
+
+            indexDict[index] = true;
+        }
+
+        // compute the essential matrix
+
+        var _compute_e_matrices = (0, _Ematrix_5pt2.default)(points1, points2),
+            Ematrices = _compute_e_matrices.Ematrices,
+            nroots = _compute_e_matrices.nroots;
+
+        // if no roots are found, avoid unncessary steps
+
+
+        if (nroots === 0) continue;
+
+        var E = void 0;
+        var minError = void 0;
+        /** gets the eMat with the lowest error
+         *  X'EX = 0 or in our case the error
+         * [x', x', 1] * E * [x, x, 1] = 0
+         * Found here https://www.cc.gatech.edu/~hays/compvision/proj3/
+        **/
+        for (var _i2 = 0; _i2 < nroots; _i2++) {
+            var eMat = Ematrices[_i2];
+
+            /**
+             *  We test with first points out of the 5 random
+             *  Matrix with the lowest error is picked
+            **/
+            var error = eMat[0][0] * points1[0][0] * points2[0][0] + eMat[0][1] * points1[0][1] * points2[0][0] + eMat[0][2] * points2[0][0] + eMat[1][0] * points1[0][0] * points2[0][1] + eMat[1][1] * points1[0][1] * points2[0][1] + eMat[1][2] * points2[0][1] + eMat[2][0] * points1[0][0] + eMat[2][1] * points1[0][1] + eMat[2][2];
+
+            error = Math.abs(error);
+
+            if (minError === undefined) {
+                minError = error;
+                E = eMat;
+            } else if (error < minError) {
+                minError = error;
+                E = eMat;
+            }
+        }
+
+        // Count number of inliers
+        var inliers = 0;
+        for (var _i3 = 0; _i3 < feats1.length; _i3 += 2) {
+            var _error = E[0][0] * feats1[_i3] * feats2[_i3] + E[0][1] * feats1[_i3 + 1] * feats2[_i3] + E[0][2] * feats2[_i3] + E[1][0] * feats1[_i3] * feats2[_i3 + 1] + E[1][1] * feats1[_i3 + 1] * feats2[_i3 + 1] + E[1][2] * feats2[_i3 + 1] + E[2][0] * feats1[_i3] + E[2][1] * feats1[_i3 + 1] + E[2][2];
+
+            _error = Math.abs(_error);
+
+            if (_error < 1e-10) inliers++;
+        }
+
+        // Set essential if first computed or one with greater inliers
+        if (maxInliers === undefined || inliers > maxInliers) {
+            maxInliers = inliers;
+            essentialMatrix = E;
+        }
+
+        iterations++;
+    }
+
+    return essentialMatrix;
+}
+
+exports.default = computeEssential;
+
+/***/ }),
+/* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _sturm = __webpack_require__(8);
+
+var _sturm2 = _interopRequireDefault(_sturm);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+// Degree of the polynomial
+var PolynomialDegree = 10; /**
+                           *   Javascript version of 5 point made easy
+                           *   Source code converted from http://users.cecs.anu.edu.au/~hongdong/Publications.html
+                           **/
+
+function createMatrix(row, col, depth) {
+    var M = [];
+
+    if (col) {
+        for (var i = 0; i < row; i++) {
+            M.push([]);
+            if (depth) {
+                for (var j = 0; j < col; j++) {
+                    M[i].push([]);
+                    // 3d matrix
+                    for (var _k = 0; _k < depth; _k++) {
+                        M[i][j].push(0);
+                    }
+                }
+            } else {
+                // 2d matrix
+                for (var _j = 0; _j < col; _j++) {
+                    M[i].push(0);
+                }
+            }
+        }
+    } else {
+        // 1d matrix
+        for (var _i = 0; _i < row; _i++) {
+            M.push(0);
+        }
+    }
+
+    return M;
+}
+
+function clearMatrix(matrix) {
+    var row = matrix.length;
+    for (var i = 0; i < row; i++) {
+        var col = matrix[i].length;
+        if (col) {
+            for (var j = 0; j < col; j++) {
+                var depth = matrix[i][j].length;
+                if (depth) {
+                    for (k = 0; k < depth; k++) {
+                        matrix[i][j][k] = 0;
+                    }
+                } else {
+                    // clears 2d matrix
+                    matrix[i][j] = 0;
+                }
+            }
+        } else {
+            // clears 1d matrix
+            matrix[i] = 0;
+        }
+    }
+}
+
+//=============================================================================
+//           Polynomial Functions
+//=============================================================================
+function multi4_1By4_1(p1, p2) {
+    var prod = createMatrix(4, 4);
+
+    prod[0][0] = p1[0] * p2[0];
+    prod[0][1] = p1[0] * p2[1];
+    prod[0][2] = p1[0] * p2[2];
+    prod[0][3] = p1[0] * p2[3];
+
+    prod[0][1] += p1[1] * p2[0];
+    prod[1][1] = p1[1] * p2[1];
+    prod[1][2] = p1[1] * p2[2];
+    prod[1][3] = p1[1] * p2[3];
+
+    prod[0][2] += p1[2] * p2[0];
+    prod[1][2] += p1[2] * p2[1];
+    prod[2][2] = p1[2] * p2[2];
+    prod[2][3] = p1[2] * p2[3];
+
+    prod[0][3] += p1[3] * p2[0];
+    prod[1][3] += p1[3] * p2[1];
+    prod[2][3] += p1[3] * p2[2];
+    prod[3][3] = p1[3] * p2[3];
+
+    return prod;
+}
+
+function multi4_2By4_1(p1, p2) {
+    var prod = createMatrix(4, 4, 4);
+
+    prod[0][0][0] = p1[0][0] * p2[0];
+    prod[0][0][1] = p1[0][0] * p2[1];
+    prod[0][0][2] = p1[0][0] * p2[2];
+    prod[0][0][3] = p1[0][0] * p2[3];
+
+    prod[0][0][1] += p1[0][1] * p2[0];
+    prod[0][1][1] = p1[0][1] * p2[1];
+    prod[0][1][2] = p1[0][1] * p2[2];
+    prod[0][1][3] = p1[0][1] * p2[3];
+
+    prod[0][0][2] += p1[0][2] * p2[0];
+    prod[0][1][2] += p1[0][2] * p2[1];
+    prod[0][2][2] = p1[0][2] * p2[2];
+    prod[0][2][3] = p1[0][2] * p2[3];
+
+    prod[0][0][3] += p1[0][3] * p2[0];
+    prod[0][1][3] += p1[0][3] * p2[1];
+    prod[0][2][3] += p1[0][3] * p2[2];
+    prod[0][3][3] = p1[0][3] * p2[3];
+
+    prod[0][1][1] += p1[1][1] * p2[0];
+    prod[1][1][1] = p1[1][1] * p2[1];
+    prod[1][1][2] = p1[1][1] * p2[2];
+    prod[1][1][3] = p1[1][1] * p2[3];
+
+    prod[0][1][2] += p1[1][2] * p2[0];
+    prod[1][1][2] += p1[1][2] * p2[1];
+    prod[1][2][2] = p1[1][2] * p2[2];
+    prod[1][2][3] = p1[1][2] * p2[3];
+
+    prod[0][1][3] += p1[1][3] * p2[0];
+    prod[1][1][3] += p1[1][3] * p2[1];
+    prod[1][2][3] += p1[1][3] * p2[2];
+    prod[1][3][3] = p1[1][3] * p2[3];
+
+    prod[0][2][2] += p1[2][2] * p2[0];
+    prod[1][2][2] += p1[2][2] * p2[1];
+    prod[2][2][2] = p1[2][2] * p2[2];
+    prod[2][2][3] = p1[2][2] * p2[3];
+
+    prod[0][2][3] += p1[2][3] * p2[0];
+    prod[1][2][3] += p1[2][3] * p2[1];
+    prod[2][2][3] += p1[2][3] * p2[2];
+    prod[2][3][3] = p1[2][3] * p2[3];
+
+    prod[0][3][3] += p1[3][3] * p2[0];
+    prod[1][3][3] += p1[3][3] * p2[1];
+    prod[2][3][3] += p1[3][3] * p2[2];
+    prod[3][3][3] = p1[3][3] * p2[3];
+
+    return prod;
+}
+
+function multi4_3ByNum(p1, num) {
+    var prod = createMatrix(4, 4, 4);
+
+    prod[0][0][0] = p1[0][0][0] * num;
+    prod[0][0][1] = p1[0][0][1] * num;
+    prod[0][0][2] = p1[0][0][2] * num;
+    prod[0][0][3] = p1[0][0][3] * num;
+    prod[0][1][1] = p1[0][1][1] * num;
+    prod[0][1][2] = p1[0][1][2] * num;
+    prod[0][1][3] = p1[0][1][3] * num;
+    prod[0][2][2] = p1[0][2][2] * num;
+    prod[0][2][3] = p1[0][2][3] * num;
+    prod[0][3][3] = p1[0][3][3] * num;
+    prod[1][1][1] = p1[1][1][1] * num;
+    prod[1][1][2] = p1[1][1][2] * num;
+    prod[1][1][3] = p1[1][1][3] * num;
+    prod[1][2][2] = p1[1][2][2] * num;
+    prod[1][2][3] = p1[1][2][3] * num;
+    prod[1][3][3] = p1[1][3][3] * num;
+    prod[2][2][2] = p1[2][2][2] * num;
+    prod[2][2][3] = p1[2][2][3] * num;
+    prod[2][3][3] = p1[2][3][3] * num;
+    prod[3][3][3] = p1[3][3][3] * num;
+
+    return prod;
+}
+
+function add4_3By4_3(p1, p2) {
+    var sum = createMatrix(4, 4, 4);
+
+    sum[0][0][0] = p1[0][0][0] + p2[0][0][0];
+    sum[0][0][1] = p1[0][0][1] + p2[0][0][1];
+    sum[0][0][2] = p1[0][0][2] + p2[0][0][2];
+    sum[0][0][3] = p1[0][0][3] + p2[0][0][3];
+    sum[0][1][1] = p1[0][1][1] + p2[0][1][1];
+    sum[0][1][2] = p1[0][1][2] + p2[0][1][2];
+    sum[0][1][3] = p1[0][1][3] + p2[0][1][3];
+    sum[0][2][2] = p1[0][2][2] + p2[0][2][2];
+    sum[0][2][3] = p1[0][2][3] + p2[0][2][3];
+    sum[0][3][3] = p1[0][3][3] + p2[0][3][3];
+    sum[1][1][1] = p1[1][1][1] + p2[1][1][1];
+    sum[1][1][2] = p1[1][1][2] + p2[1][1][2];
+    sum[1][1][3] = p1[1][1][3] + p2[1][1][3];
+    sum[1][2][2] = p1[1][2][2] + p2[1][2][2];
+    sum[1][2][3] = p1[1][2][3] + p2[1][2][3];
+    sum[1][3][3] = p1[1][3][3] + p2[1][3][3];
+    sum[2][2][2] = p1[2][2][2] + p2[2][2][2];
+    sum[2][2][3] = p1[2][2][3] + p2[2][2][3];
+    sum[2][3][3] = p1[2][3][3] + p2[2][3][3];
+    sum[3][3][3] = p1[3][3][3] + p2[3][3][3];
+
+    return sum;
+}
+
+function add4_3To4_3(p1, p2) {
+    p1[0][0][0] += p2[0][0][0];
+    p1[0][0][1] += p2[0][0][1];
+    p1[0][0][2] += p2[0][0][2];
+    p1[0][0][3] += p2[0][0][3];
+    p1[0][1][1] += p2[0][1][1];
+    p1[0][1][2] += p2[0][1][2];
+    p1[0][1][3] += p2[0][1][3];
+    p1[0][2][2] += p2[0][2][2];
+    p1[0][2][3] += p2[0][2][3];
+    p1[0][3][3] += p2[0][3][3];
+    p1[1][1][1] += p2[1][1][1];
+    p1[1][1][2] += p2[1][1][2];
+    p1[1][1][3] += p2[1][1][3];
+    p1[1][2][2] += p2[1][2][2];
+    p1[1][2][3] += p2[1][2][3];
+    p1[1][3][3] += p2[1][3][3];
+    p1[2][2][2] += p2[2][2][2];
+    p1[2][2][3] += p2[2][2][3];
+    p1[2][3][3] += p2[2][3][3];
+    p1[3][3][3] += p2[3][3][3];
+}
+
+function multNumTo4_3(p1, num) {
+    p1[0][0][0] *= num;
+    p1[0][0][1] *= num;
+    p1[0][0][2] *= num;
+    p1[0][0][3] *= num;
+    p1[0][1][1] *= num;
+    p1[0][1][2] *= num;
+    p1[0][1][3] *= num;
+    p1[0][2][2] *= num;
+    p1[0][2][3] *= num;
+    p1[0][3][3] *= num;
+    p1[1][1][1] *= num;
+    p1[1][1][2] *= num;
+    p1[1][1][3] *= num;
+    p1[1][2][2] *= num;
+    p1[1][2][3] *= num;
+    p1[1][3][3] *= num;
+    p1[2][2][2] *= num;
+    p1[2][2][3] *= num;
+    p1[2][3][3] *= num;
+    p1[3][3][3] *= num;
+}
+
+function sub4_3By4_3(p1, p2) {
+    var dif = createMatrix(4, 4, 4);
+
+    dif[0][0][0] = p1[0][0][0] - p2[0][0][0];
+    dif[0][0][1] = p1[0][0][1] - p2[0][0][1];
+    dif[0][0][2] = p1[0][0][2] - p2[0][0][2];
+    dif[0][0][3] = p1[0][0][3] - p2[0][0][3];
+    dif[0][1][1] = p1[0][1][1] - p2[0][1][1];
+    dif[0][1][2] = p1[0][1][2] - p2[0][1][2];
+    dif[0][1][3] = p1[0][1][3] - p2[0][1][3];
+    dif[0][2][2] = p1[0][2][2] - p2[0][2][2];
+    dif[0][2][3] = p1[0][2][3] - p2[0][2][3];
+    dif[0][3][3] = p1[0][3][3] - p2[0][3][3];
+    dif[1][1][1] = p1[1][1][1] - p2[1][1][1];
+    dif[1][1][2] = p1[1][1][2] - p2[1][1][2];
+    dif[1][1][3] = p1[1][1][3] - p2[1][1][3];
+    dif[1][2][2] = p1[1][2][2] - p2[1][2][2];
+    dif[1][2][3] = p1[1][2][3] - p2[1][2][3];
+    dif[1][3][3] = p1[1][3][3] - p2[1][3][3];
+    dif[2][2][2] = p1[2][2][2] - p2[2][2][2];
+    dif[2][2][3] = p1[2][2][3] - p2[2][2][3];
+    dif[2][3][3] = p1[2][3][3] - p2[2][3][3];
+    dif[3][3][3] = p1[3][3][3] - p2[3][3][3];
+
+    return dif;
+}
+
+function add4_2By4_2(p1, p2) {
+    var sum = createMatrix(4, 4);
+
+    sum[0][0] = p1[0][0] + p2[0][0];
+    sum[0][1] = p1[0][1] + p2[0][1];
+    sum[0][2] = p1[0][2] + p2[0][2];
+    sum[0][3] = p1[0][3] + p2[0][3];
+    sum[1][1] = p1[1][1] + p2[1][1];
+    sum[1][2] = p1[1][2] + p2[1][2];
+    sum[1][3] = p1[1][3] + p2[1][3];
+    sum[2][2] = p1[2][2] + p2[2][2];
+    sum[2][3] = p1[2][3] + p2[2][3];
+    sum[3][3] = p1[3][3] + p2[3][3];
+
+    return sum;
+}
+
+function add4_2To4_2(p1, p2) {
+    p1[0][0] += p2[0][0];
+    p1[0][1] += p2[0][1];
+    p1[0][2] += p2[0][2];
+    p1[0][3] += p2[0][3];
+    p1[1][1] += p2[1][1];
+    p1[1][2] += p2[1][2];
+    p1[1][3] += p2[1][3];
+    p1[2][2] += p2[2][2];
+    p1[2][3] += p2[2][3];
+    p1[3][3] += p2[3][3];
+}
+
+function sub4_2By4_2(p1, p2) {
+    var dif = createMatrix(4, 4);
+
+    dif[0][0] = p1[0][0] - p2[0][0];
+    dif[0][1] = p1[0][1] - p2[0][1];
+    dif[0][2] = p1[0][2] - p2[0][2];
+    dif[0][3] = p1[0][3] - p2[0][3];
+    dif[1][1] = p1[1][1] - p2[1][1];
+    dif[1][2] = p1[1][2] - p2[1][2];
+    dif[1][3] = p1[1][3] - p2[1][3];
+    dif[2][2] = p1[2][2] - p2[2][2];
+    dif[2][3] = p1[2][3] - p2[2][3];
+    dif[3][3] = p1[3][3] - p2[3][3];
+
+    return dif;
+}
+
+function add4_1By4_1(p1, p2) {
+    var sum = createMatrix(4);
+
+    sum[0] = p1[0] + p2[0];
+    sum[1] = p1[1] + p2[1];
+    sum[2] = p1[2] + p2[2];
+    sum[3] = p1[3] + p2[3];
+
+    return sum;
+}
+
+function sub4_1By4_1(p1, p2) {
+    var diff = createMatrix(4);
+
+    dif[0] = p1[0] - p2[0];
+    dif[1] = p1[1] - p2[1];
+    dif[2] = p1[2] - p2[2];
+    dif[3] = p1[3] - p2[3];
+
+    return dif;
+}
+
+//=============================================================================
+
+function polydet4(E) {
+    // Takes the determinant of a polynomial
+    var poly1 = sub4_2By4_2(multi4_1By4_1(E[1][1], E[2][2]), multi4_1By4_1(E[2][1], E[1][2]));
+    var poly2 = sub4_2By4_2(multi4_1By4_1(E[2][1], E[0][2]), multi4_1By4_1(E[0][1], E[2][2]));
+    var poly3 = sub4_2By4_2(multi4_1By4_1(E[0][1], E[1][2]), multi4_1By4_1(E[1][1], E[0][2]));
+
+    var poly4 = multi4_2By4_1(poly1, E[0][0]);
+    var poly5 = multi4_2By4_1(poly2, E[1][0]);
+    var poly6 = multi4_2By4_1(poly3, E[2][0]);
+
+    var det = add4_3By4_3(add4_3By4_3(poly4, poly5), poly6);
+
+    return det;
+}
+
+function traceEEt(E) {
+    // Takes the trace of E E' -- returns a quadratic polynomial
+    // Trace of product is the elementwise product of the elements
+    var poly1 = multi4_1By4_1(E[0][0], E[0][0]);
+    var poly2 = multi4_1By4_1(E[0][1], E[0][1]);
+    var poly3 = multi4_1By4_1(E[0][2], E[0][2]);
+    var poly4 = multi4_1By4_1(E[1][0], E[1][0]);
+    var poly5 = multi4_1By4_1(E[1][1], E[1][1]);
+    var poly6 = multi4_1By4_1(E[1][2], E[1][2]);
+    var poly7 = multi4_1By4_1(E[2][0], E[2][0]);
+    var poly8 = multi4_1By4_1(E[2][1], E[2][1]);
+    var poly9 = multi4_1By4_1(E[2][2], E[2][2]);
+
+    var poly10 = add4_2By4_2(add4_2By4_2(poly1, poly2), add4_2By4_2(poly3, poly4));
+    var poly11 = add4_2By4_2(add4_2By4_2(poly5, poly6), add4_2By4_2(poly7, poly8));
+
+    var tr = add4_2By4_2(add4_2By4_2(poly9, poly10), poly11);
+
+    return tr;
+}
+
+function mono_coeff(B, A, n) {
+    // Extracts the monomial coefficients in x and y (with z = 1) from
+    // a cubic homogeneous polynomial. Returns 4 vectors (degrees 0 to 3 in w)
+
+    // Make some constants to make the code easier to read
+
+    // Degrees of terms in w
+    var w0 = 0;
+    var w1 = 1;
+    var w2 = 2;
+    var w3 = 3;
+
+    // Linear variables
+    var w = 0;
+    var x = 1;
+    var y = 2;
+    var z = 3;
+
+    // Monomials
+    var xx = 3;
+    var xy = 4;
+    var yy = 5;
+    var xxx = 6;
+    var xxy = 7;
+    var xyy = 8;
+    var yyy = 9;
+
+    // Terms in w^0
+    A[w0][n][0] = B[z][z][z];
+    A[w0][n][x] = B[x][z][z];
+    A[w0][n][y] = B[y][z][z];
+    A[w0][n][xx] = B[x][x][z];
+    A[w0][n][yy] = B[y][y][z];
+    A[w0][n][xy] = B[x][y][z];
+    A[w0][n][xxx] = B[x][x][x];
+    A[w0][n][xxy] = B[x][x][y];
+    A[w0][n][xyy] = B[x][y][y];
+    A[w0][n][yyy] = B[y][y][y];
+
+    // Terms in w^1
+    A[w1][n][0] = B[w][z][z];
+    A[w1][n][x] = B[w][x][z];
+    A[w1][n][y] = B[w][y][z];
+    A[w1][n][xx] = B[w][x][x];
+    A[w1][n][yy] = B[w][y][y];
+    A[w1][n][xy] = B[w][x][y];
+
+    // Terms in w^2
+    A[w2][n][0] = B[w][w][z];
+    A[w2][n][x] = B[w][w][x];
+    A[w2][n][y] = B[w][w][y];
+
+    // Terms in w^3
+    A[w3][n][0] = B[w][w][w];
+}
+
+function EEeqns_5pt(E, A) {
+    //
+    // Computes the equations that will be used to input to polyeig.
+    //    void EEeqns_5pt(E, A)
+    // where E has dimensions E(3, 3, 4).  The output is a matrix
+    // of dimension A(4, 10, 10), where A(i, :, :) is the coeffient of w^{i-1}
+    //
+
+    // Makes all the equations from the essential matrix E
+
+    // First of all, set the equations to zero
+    // memset (&(A[0][0][0]), 0, sizeof(EquationSet));
+
+    // Find the trace - this is a quadratic polynomial
+    var tr = traceEEt(E);
+
+    // First equation is from the determinant
+    mono_coeff(polydet4(E), A, 0);
+
+    // Other equations from the equation 2 E*E'*E - tr(E*E') E = 0
+    // In the following loop, we compute EE'E(i,j) = sum_pq E(i,p)*E(q,p)*E(q,j)
+    // The way this is done is optimized for speed.  We compute first the matrix
+    // EE'(i, q) and then use this to accumulate EE'E(i, j)
+
+    var eqn = 1; // Count on the next equation
+    for (var i = 0; i < 3; i++) {
+        // An array of cubic polynomials, one for each j = 0 ... 2
+        var EEE_i = []; // Will hold (EE'E)(i,j)
+        for (var temp = 0; temp < 3; temp++) {
+            EEE_i.push(createMatrix(4, 4, 4));
+        }
+
+        // Compute each EE'(i,q) = sum_p E(i,p) E(q,p)
+        for (var q = 0; q < 3; q++) {
+            // Accumulate EE(i, q)
+            var EE_iq = createMatrix(4, 4);
+
+            for (var p = 0; p < 3; p++) {
+                add4_2To4_2(EE_iq, multi4_1By4_1(E[i][p], E[q][p]));
+            }
+
+            // Now, accumulate EEE(ij) = sum_q  EE'(i,q) * E(q, j)
+            for (var j = 0; j < 3; j++) {
+                add4_3To4_3(EEE_i[j], multi4_2By4_1(EE_iq, E[q][j]));
+            }
+        }
+
+        // Now, EE'E(i,j) is computed for this i and all j
+        // We can complete the computation of the coefficients from EE'E(i, j)
+        for (var _j2 = 0; _j2 < 3; _j2++) {
+            mono_coeff(sub4_3By4_3(multi4_3ByNum(EEE_i[_j2], 2), multi4_2By4_1(tr, E[i][_j2])), A, eqn++);
+        }
+    }
+}
+
+function null_space_solve2(A) {
+    // Solve for the null-space of the matrix
+
+    // This time we will do pivoting
+    var x = void 0,
+        y = void 0;
+    var p1 = void 0;
+    var f0 = Math.abs(A[0][2]),
+        f1 = Math.abs(A[1][2]),
+        f2 = Math.abs(A[2][2]);
+    if (f0 > f1) p1 = f0 > f2 ? 0 : 2;else p1 = f1 > f2 ? 1 : 2;
+
+    // The other two rows
+    var r1 = (p1 + 1) % 3,
+        r2 = (p1 + 2) % 3;
+
+    // Now, use this to pivot
+    var fac = A[r1][2] / A[p1][2];
+    A[r1][0] -= fac * A[p1][0];
+    A[r1][1] -= fac * A[p1][1];
+
+    fac = A[r2][2] / A[p1][2];
+    A[r2][0] -= fac * A[p1][0];
+    A[r2][1] -= fac * A[p1][1];
+
+    // Second pivot - largest element in column 1
+    var p2 = Math.abs(A[r1][1]) > Math.abs(A[r2][1]) ? r1 : r2;
+
+    // Now, read off the values - back substitution
+    x = -A[p2][0] / A[p2][1];
+    y = -(A[p1][0] + A[p1][1] * x) / A[p1][2];
+
+    return {
+        x: x,
+        y: y
+    };
+}
+
+function null_space_solve1(A, E) {
+    // This will compute the set of solutions for the equations
+    // Sweep out one column at a time, starting with highest column number
+
+    // We do Gaussian elimination to convert M to the form M = [X | I]
+    // Then the null space will be [-I | X].
+
+    // For present, this is done without pivoting.
+    // Mostly, do not need to actually change right hand part (that becomes I)
+    var lastrow = 4;
+    var firstcol = 4; // First column to do elimination to make I
+    var lastcol = 8;
+
+    // First sweep is to get rid of the above diagonal parts
+    // No need to do first col
+    for (var col = lastcol; col > firstcol; col--) {
+        // Remove column col
+        var row = col - firstcol; // Row to pivot around
+        var _pivot = A[row][col];
+
+        if (_pivot === 0) {
+            return false;
+        }
+
+        // Sweep out all rows up to the current one
+        for (var i = 0; i < row; i++) {
+            // This factor of the pivot row is to subtract from row i
+            var _fac = A[i][col] / _pivot;
+
+            // Constant terms
+            for (var j = 0; j < col; j++) {
+                A[i][j] -= _fac * A[row][j];
+            }
+        }
+    }
+
+    // Now, do backward sweep to clear below the diagonal
+    for (var _col = firstcol; _col < lastcol; _col++) // No need to do lastcol
+    {
+        // Remove column col
+        var _row = _col - firstcol; // Row to pivot around
+        var _pivot2 = A[_row][_col];
+
+        if (_pivot2 === 0) {
+            return false;
+        }
+
+        // Sweep out all rows up to the current one
+        for (var _i2 = _row + 1; _i2 <= lastrow; _i2++) {
+            // This factor of the pivot row is to subtract from row i
+            var _fac2 = A[_i2][_col] / _pivot2;
+
+            // Constant terms
+            for (var _j3 = 0; _j3 < firstcol; _j3++) {
+                A[_i2][_j3] -= _fac2 * A[_row][_j3];
+            }
+        }
+    }
+
+    // Make this into a matrix of solutions
+    var fac = void 0;
+    E[0][0] = [1, 0, 0, 0];
+    E[0][1] = [0, 1, 0, 0];
+    E[0][2] = [0, 0, 1, 0];
+    E[1][0] = [0, 0, 0, 1];
+    fac = -1.0 / A[0][4];
+    E[1][1] = [fac * A[0][0], fac * A[0][1], fac * A[0][2], fac * A[0][3]];
+    fac = -1.0 / A[1][5];
+    E[1][2] = [fac * A[1][0], fac * A[1][1], fac * A[1][2], fac * A[1][3]];
+    fac = -1.0 / A[2][6];
+    E[2][0] = [fac * A[2][0], fac * A[2][1], fac * A[2][2], fac * A[2][3]];
+    fac = -1.0 / A[3][7];
+    E[2][1] = [fac * A[3][0], fac * A[3][1], fac * A[3][2], fac * A[3][3]];
+    fac = -1.0 / A[4][8];
+    E[2][2] = [fac * A[4][0], fac * A[4][1], fac * A[4][2], fac * A[4][3]];
+
+    return true;
+}
+
+function Ematrix_5pt(q, qp, E, A) {
+    // Computes the E-matrix from match inputs
+
+    // A matrix to solve linearly for the ematrix
+    // epipolar equations for the points
+    var M = createMatrix(9, 9);
+
+    for (var i = 0; i < 5; i++) {
+        M[i][0] = qp[i][0] * q[i][0];
+        M[i][1] = qp[i][0] * q[i][1];
+        M[i][2] = qp[i][0];
+        M[i][3] = qp[i][1] * q[i][0];
+        M[i][4] = qp[i][1] * q[i][1];
+        M[i][5] = qp[i][1];
+        M[i][6] = q[i][0];
+        M[i][7] = q[i][1];
+        M[i][8] = 1;
+    }
+
+    // Solve using null_space_solve
+    if (!null_space_solve1(M, E)) {
+        return false;
+    }
+
+    EEeqns_5pt(E, A);
+
+    return true;
+}
+
+function sweep_up(A, row, col, degree) {
+    // Use the given pivot point to sweep out above the pivot
+    var num1 = 6; // number of nonzero columns of A in degree 1
+    var num2 = 3; // number of nonzero columns of A in degree 2
+    var num3 = 1; // number of nonzero columns of A in degree 3
+
+    // Find the pivot value
+    var pivot = A[degree][row][col];
+
+    // Sweep out all rows up to the current one
+    for (var i = 0; i < row; i++) {
+        // This factor of the pivot row is to subtract from row i
+        var fac = A[degree][i][col] / pivot;
+
+        // Constant terms
+        for (var j = 0; j <= col; j++) {
+            A[0][i][j] -= fac * A[0][row][j];
+        } // Degree 1 terms
+        for (var _j4 = 0; _j4 < num1; _j4++) {
+            A[1][i][_j4] -= fac * A[1][row][_j4];
+        } // Degree 2 terms
+        for (var _j5 = 0; _j5 < num2; _j5++) {
+            A[2][i][_j5] -= fac * A[2][row][_j5];
+        } // Degree 3 terms
+        for (var _j6 = 0; _j6 < num3; _j6++) {
+            A[3][i][_j6] -= fac * A[3][row][_j6];
+        }
+    }
+}
+
+function sweep_down(A, row, col, degree, lastrow) {
+    // Use the given pivot point to sweep out below the pivot
+    var num1 = 6; // number of nonzero columns of A in degree 1
+    var num2 = 3; // number of nonzero columns of A in degree 2
+    var num3 = 1; // number of nonzero columns of A in degree 3
+
+    // The value of the pivot point
+    var pivot = A[degree][row][col];
+
+    // Sweep out all rows up to the current one
+    for (var i = row + 1; i <= lastrow; i++) {
+        // This factor of the pivot row is to subtract from row i
+        var fac = A[degree][i][col] / pivot;
+
+        // Constant terms
+        for (var j = 0; j <= col; j++) {
+            A[0][i][j] -= fac * A[0][row][j];
+        } // Degree 1 terms
+        for (var _j7 = 0; _j7 < num1; _j7++) {
+            A[1][i][_j7] -= fac * A[1][row][_j7];
+        } // Degree 2 terms
+        for (var _j8 = 0; _j8 < num2; _j8++) {
+            A[2][i][_j8] -= fac * A[2][row][_j8];
+        } // Degree 3 terms
+        for (var _j9 = 0; _j9 < num3; _j9++) {
+            A[3][i][_j9] -= fac * A[3][row][_j9];
+        }
+    }
+}
+
+function pivot(A, col, deg, lastrow) {
+    // Pivot so that the largest element in the column is in the diagonal
+
+    // Use the given pivot point to sweep out below the pivot
+    var num1 = 6; // number of nonzero columns of A in degree 1
+    var num2 = 3; // number of nonzero columns of A in degree 2
+    var num3 = 1; // number of nonzero columns of A in degree 3
+
+    // Find the maximum value in the column
+    var maxval = -1.0;
+    var row = -1;
+    for (var i = 0; i <= lastrow; i++) {
+        if (i != col && Math.abs(A[deg][i][col]) > maxval) {
+            row = i;
+            maxval = Math.abs(A[deg][i][col]);
+        }
+    }
+
+    // We should add or subtract depending on sign
+    var fac = void 0;
+    if (A[deg][row][col] * A[deg][col][col] < 0.0) {
+        fac = -1.0;
+    } else {
+        fac = 1.0;
+    }
+
+    // Next, add row to the pivot row
+    // Constant terms
+    for (var j = 0; j <= col; j++) {
+        A[0][col][j] += fac * A[0][row][j];
+    }
+
+    // Degree 1 terms
+    for (var _j10 = 0; _j10 < num1; _j10++) {
+        A[1][col][_j10] += fac * A[1][row][_j10];
+    }
+
+    // Degree 2 terms
+    for (var _j11 = 0; _j11 < num2; _j11++) {
+        A[2][col][_j11] += fac * A[2][row][_j11];
+    }
+
+    // Degree 3 terms
+    for (var _j12 = 0; _j12 < num3; _j12++) {
+        A[3][col][_j12] += fac * A[3][row][_j12];
+    }
+}
+
+function reduce_Ematrix(A) {
+    // This reduces the equation set to 3 x 3.  In this version there is
+    // no pivoting, which relies on the pivots to be non-zero.
+
+    // Relies on the particular form of the A matrix to reduce it
+    // That means that there are several rows of zero elements in different
+    // degrees, as given below.
+
+    // Sweeping out the constant terms to reduce to 6 x 6
+    pivot(A, 9, 0, 8);
+    sweep_up(A, 9, 9, 0);
+    pivot(A, 8, 0, 7);
+    sweep_up(A, 8, 8, 0);
+    pivot(A, 7, 0, 6);
+    sweep_up(A, 7, 7, 0);
+    pivot(A, 6, 0, 5);
+    sweep_up(A, 6, 6, 0);
+
+    // Now, the matrix is 6 x 6.  Next we need to handle linear terms
+    pivot(A, 5, 0, 4);
+    sweep_up(A, 5, 5, 0);
+    pivot(A, 4, 0, 3);
+    sweep_up(A, 4, 4, 0);
+    pivot(A, 3, 0, 2);
+    sweep_up(A, 3, 3, 0);
+
+    var lastrow = 5;
+    sweep_down(A, 3, 3, 0, lastrow);
+    sweep_down(A, 4, 4, 0, lastrow);
+
+    // Also sweep out the first-order terms
+    sweep_up(A, 2, 5, 1);
+    sweep_up(A, 1, 4, 1);
+
+    sweep_down(A, 0, 3, 1, lastrow);
+    sweep_down(A, 1, 4, 1, lastrow);
+    sweep_down(A, 2, 5, 1, lastrow);
+
+    // Now, sweep out the x terms by increasing the degree
+    for (var i = 0; i < 3; i++) {
+        var fac = A[1][i][3 + i] / A[0][3 + i][3 + i];
+
+        // Introduces 4-th degree term
+        A[4][i][0] = -A[3][i + 3][0] * fac;
+
+        // Transfer terms of degree 0 to 3
+        for (var j = 0; j < 3; j++) {
+            A[3][i][j] -= A[2][i + 3][j] * fac;
+            A[2][i][j] -= A[1][i + 3][j] * fac;
+            A[1][i][j] -= A[0][i + 3][j] * fac;
+        }
+    }
+}
+
+function one_cofactor(A, poly, r0, r1, r2) {
+    // Computes one term of the 3x3 cofactor expansion
+
+    // Get a polynomial to hold a 2x2 determinant
+    var two = createMatrix(7);
+
+    // Compute the 2x2 determinant - results in a 6x6 determinant
+    for (var i = 0; i <= 3; i++) {
+        for (var j = 0; j <= 3; j++) {
+            two[i + j] += A[i][r1][1] * A[j][r2][2] - A[i][r2][1] * A[j][r1][2];
+        }
+    }
+
+    // Now, multiply by degree 4 polynomial
+    for (var _i3 = 0; _i3 <= 6; _i3++) {
+        for (var _j13 = 0; _j13 <= 4; _j13++) {
+            poly[_i3 + _j13] += A[_j13][r0][0] * two[_i3];
+        }
+    }
+}
+
+function compute_determinant(A, poly) {
+    // Does the final determinant computation to return the determinant
+
+    // Now, the three cofactors
+    one_cofactor(A, poly, 0, 1, 2);
+    one_cofactor(A, poly, 1, 2, 0);
+    one_cofactor(A, poly, 2, 0, 1);
+}
+
+function compute_E_matrix(Es, A, w, E) {
+    // Compute the essential matrix corresponding to this root
+    var w2 = w * w;
+    var w3 = w2 * w;
+    var w4 = w3 * w;
+
+    // Form equations to solve
+    var M = createMatrix(3, 3);
+    for (var i = 0; i < 3; i++) {
+        for (var j = 0; j < 3; j++) {
+            M[i][j] = A[0][i][j] + w * A[1][i][j] + w2 * A[2][i][j] + w3 * A[3][i][j];
+        }
+
+        // Only the first row has degree 4 terms
+        M[i][0] += w4 * A[4][i][0];
+    }
+
+    // Now, find the solution
+
+    var _null_space_solve = null_space_solve2(M),
+        x = _null_space_solve.x,
+        y = _null_space_solve.y;
+
+    // Multiply out the solution to get the essential matrix
+
+
+    for (var _i4 = 0; _i4 < 3; _i4++) {
+        for (var _j14 = 0; _j14 < 3; _j14++) {
+            var p = Es[_i4][_j14];
+            E[_i4][_j14] = w * p[0] + x * p[1] + y * p[2] + p[3];
+        }
+    }
+}
+
+function compute_e_matrices(pts1, pts2) {
+    var Ematrices = [];
+    for (var i = 0; i < 10; i++) {
+        Ematrices[i] = createMatrix(3, 3);
+    }
+
+    var nroots = 0;
+    // Get the matrix set
+    var A = createMatrix(5, 10, 10);
+    var E = createMatrix(3, 3, 4);
+
+    if (!Ematrix_5pt(pts1, pts2, E, A)) {
+        return {
+            nroots: nroots,
+            Ematrices: Ematrices
+        };
+    };
+
+    // Now, reduce its dimension to 3 x 3
+    reduce_Ematrix(A);
+
+    // Finally, get the 10-th degree polynomial out of this
+    var poly = createMatrix(PolynomialDegree + 1);
+    compute_determinant(A, poly);
+
+    // Find the roots
+    var roots = createMatrix(PolynomialDegree);
+    nroots = (0, _sturm2.default)(poly, PolynomialDegree, roots);
+
+    // Now, get the ematrices
+    for (var _i5 = 0; _i5 < nroots; _i5++) {
+        compute_E_matrix(E, A, roots[_i5], Ematrices[_i5]);
+    }
+
+    return {
+        nroots: nroots,
+        Ematrices: Ematrices
+    };
+}
+
+exports.default = compute_e_matrices;
+
+/***/ }),
+/* 8 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+var RELERROR = 1.0e-12; /* smallest relative error we want */
+var MAXPOW = 32; /* max power of 10 we wish to search to */
+var MAXIT = 800; /* max number of iterations */
+var SMALL_ENOUGH = 1.0e-12; /* a coefficient smaller than SMALL_ENOUGH
+                             * is considered to be zero (0.0). */
+var Maxdegree = 20;
+
+/* structure type for representing a polynomial */
+function poly() {
+    this.order;
+    this.coef = [];
+}
+
+/*---------------------------------------------------------------------------
+ * evalpoly
+ *
+ * evaluate polynomial defined in coef returning its value.
+ *--------------------------------------------------------------------------*/
+
+function evalpoly(ord, coef, x) {
+    var fp = ord;
+    var f = coef[ord];
+
+    for (fp--; fp >= 0; fp--) {
+        f = x * f + coef[fp];
+    }
+
+    return f;
+}
+
+function modrf_pos(ord, coef, a, b, roots, invert, counter) {
+    var its = void 0;
+    var fx = void 0,
+        lfx = void 0;
+    var fp = void 0;
+    var scoef = 0;
+    var ecoef = ord;
+    var fa = void 0,
+        fb = void 0;
+
+    // Invert the interval if required
+    if (invert) {
+        var temp = a;
+        a = 1.0 / b;
+        b = 1.0 / temp;
+    }
+
+    // Evaluate the polynomial at the end points
+    if (invert) {
+        fb = fa = coef[scoef];
+        for (fp = 1; fp <= ecoef; fp++) {
+            fa = a * fa + coef[fp];
+            fb = b * fb + coef[fp];
+        }
+    } else {
+        fb = fa = coef[ecoef];
+        for (fp = ecoef - 1; fp >= scoef; fp--) {
+            fa = a * fa + coef[fp];
+            fb = b * fb + coef[fp];
+        }
+    }
+
+    // if there is no sign difference the method won't work
+    if (fa * fb > 0.0) {
+        return 0;
+    }
+
+    // Return if the values are close to zero already
+    if (Math.abs(fa) < RELERROR) {
+        roots[counter] = invert ? 1.0 / a : a;
+        return 1;
+    }
+
+    if (Math.abs(fb) < RELERROR) {
+        roots[counter] = invert ? 1.0 / b : b;
+        return 1;
+    }
+
+    lfx = fa;
+
+    for (its = 0; its < MAXIT; its++) {
+        // Assuming straight line from a to b, find zero
+        var x = (fb * a - fa * b) / (fb - fa);
+
+        // Evaluate the polynomial at x
+        if (invert) {
+            fx = coef[scoef];
+            for (fp = scoef + 1; fp <= ecoef; fp++) {
+                fx = x * fx + coef[fp];
+            }
+        } else {
+            fx = coef[ecoef];
+            for (fp = ecoef - 1; fp >= scoef; fp--) {
+                fx = x * fx + coef[fp];
+            }
+        }
+
+        // Evaluate two stopping conditions
+        if (Math.abs(x) > RELERROR && Math.abs(fx / x) < RELERROR) {
+            roots[counter] = invert ? 1.0 / x : x;
+            return 1;
+        } else if (Math.abs(fx) < RELERROR) {
+            roots[counter] = invert ? 1.0 / x : x;
+            return 1;
+        }
+
+        // Subdivide region, depending on whether fx has same sign as fa or fb
+        if (fa * fx < 0) {
+            b = x;
+            fb = fx;
+            if (lfx * fx > 0) fa /= 2;
+        } else {
+            a = x;
+            fa = fx;
+            if (lfx * fx > 0) fb /= 2;
+        }
+
+        // Return if the difference between a and b is very small
+        if (Math.abs(b - a) < Math.abs(RELERROR * a)) {
+            roots[counter] = invert ? 1.0 / a : a;
+            return 1;
+        }
+
+        lfx = fx;
+    }
+
+    //==================================================================
+    // This is debugging in case something goes wrong.
+    // If we reach here, we have not converged -- give some diagnostics
+    //==================================================================
+
+    // Evaluate the true values at a and b
+    if (invert) {
+        fb = fa = coef[scoef];
+        for (fp = scoef + 1; fp <= ecoef; fp++) {
+            fa = a * fa + coef[fp];
+            fb = b * fb + coef[fp];
+        }
+    } else {
+        fb = fa = coef[ecoef];
+        for (fp = ecoef - 1; fp >= scoef; fp--) {
+            fa = a * fa + coef[fp];
+            fb = b * fb + coef[fp];
+        }
+    }
+
+    return 0;
+}
+
+/*---------------------------------------------------------------------------
+ * modrf
+ *
+ * uses the modified regula-falsi method to evaluate the root
+ * in interval [a,b] of the polynomial described in coef. The
+ * root is returned is returned in *val. The routine returns zero
+ * if it can't converge.
+ *--------------------------------------------------------------------------*/
+
+function modrf(ord, coef, a, b, roots, counter) {
+    // This is an interfact to modrf that takes account of different cases
+    // The idea is that the basic routine works badly for polynomials on
+    // intervals that extend well beyond [-1, 1], because numbers get too large
+
+    var fp = void 0;
+    var scoef = 0;
+    var ecoef = ord;
+    var invert = 1;
+
+    var fp1 = 0.0,
+        fm1 = 0.0; // Values of function at 1 and -1
+    var fa = 0.0,
+        fb = 0.0; // Values at end points
+
+    // We assume that a < b
+    if (a > b) {
+        var temp = a;
+        a = b;
+        b = temp;
+    }
+
+    // The normal case, interval is inside [-1, 1]
+    if (b <= 1.0 && a >= -1.0) return modrf_pos(ord, coef, a, b, roots, !invert, counter);
+
+    // The case where the interval is outside [-1, 1]
+    if (a >= 1.0 || b <= -1.0) return modrf_pos(ord, coef, a, b, roots, invert, counter);
+
+    // If we have got here, then the interval includes the points 1 or -1.
+    // In this case, we need to evaluate at these points
+
+    // Evaluate the polynomial at the end points
+    for (fp = ecoef - 1; fp >= scoef; fp--) {
+        fp1 = coef[fp] + fp1;
+        fm1 = coef[fp] - fm1;
+        fa = a * fa + coef[fp];
+        fb = b * fb + coef[fp];
+    }
+
+    // Then there is the case where the interval contains -1 or 1
+    if (a < -1.0 && b > 1.0) {
+        // Interval crosses over 1.0, so cut
+        if (fa * fm1 < 0.0) // The solution is between a and -1
+            return modrf_pos(ord, coef, a, -1.0, roots, invert, counter);else if (fb * fp1 < 0.0) // The solution is between 1 and b
+            return modrf_pos(ord, coef, 1.0, b, roots, invert, counter);else // The solution is between -1 and 1
+            return modrf_pos(ord, coef, -1.0, 1.0, roots, !invert, counter);
+    } else if (a < -1.0) {
+        // Interval crosses over 1.0, so cut
+        if (fa * fm1 < 0.0) // The solution is between a and -1
+            return modrf_pos(ord, coef, a, -1.0, roots, invert, counter);else // The solution is between -1 and b
+            return modrf_pos(ord, coef, -1.0, b, roots, !invert, counter);
+    } else {
+        // b > 1.0
+        if (fb * fp1 < 0.0) // The solution is between 1 and b
+            return modrf_pos(ord, coef, 1.0, b, roots, invert, counter);else // The solution is between a and 1
+            return modrf_pos(ord, coef, a, 1.0, roots, !invert, counter);
+    }
+}
+
+/*---------------------------------------------------------------------------
+ * modp
+ *
+ *  calculates the modulus of u(x) / v(x) leaving it in r, it
+ *  returns 0 if r(x) is a constant.
+ *  note: this function assumes the leading coefficient of v is 1 or -1
+ *--------------------------------------------------------------------------*/
+
+function modp(u, v, r) {
+    var j = void 0,
+        k = void 0; /* Loop indices */
+
+    for (var uc = 0; uc <= u.ord; uc++) {
+        r.coef[uc] = u.coef[uc];
+    }
+
+    if (v.coef[v.ord] < 0.0) {
+
+        for (k = u.ord - v.ord - 1; k >= 0; k -= 2) {
+            r.coef[k] = -r.coef[k];
+        }for (k = u.ord - v.ord; k >= 0; k--) {
+            for (j = v.ord + k - 1; j >= k; j--) {
+                r.coef[j] = -r.coef[j] - r.coef[v.ord + k] * v.coef[j - k];
+            }
+        }
+    } else {
+        for (k = u.ord - v.ord; k >= 0; k--) {
+            for (j = v.ord + k - 1; j >= k; j--) {
+                r.coef[j] -= r.coef[v.ord + k] * v.coef[j - k];
+            }
+        }
+    }
+
+    k = v.ord - 1;
+    while (k >= 0 && Math.abs(r.coef[k]) < SMALL_ENOUGH) {
+        r.coef[k] = 0.0;
+        k--;
+    }
+
+    r.ord = k < 0 ? 0 : k;
+
+    return r.ord;
+}
+
+/*---------------------------------------------------------------------------
+ * buildsturm
+ *
+ * build up a sturm sequence for a polynomial in smat, returning
+ * the number of polynomials in the sequence
+ *--------------------------------------------------------------------------*/
+
+function buildsturm(ord, sseq) {
+    sseq[0].ord = ord;
+    sseq[1].ord = ord - 1;
+
+    /* calculate the derivative and normalise the leading coefficient */
+    {
+        var i = void 0; // Loop index
+        var sp = void 0;
+        var f = Math.abs(sseq[0].coef[ord] * ord);
+        var fp = 0;
+
+        for (i = 1; i <= ord; i++) {
+            sseq[1].coef[fp] = sseq[0].coef[fp + 1] * i / f;
+            fp++;
+        }
+
+        var counter = 2;
+        sp = sseq[counter];
+        /* construct the rest of the Sturm sequence */
+        while (modp(sseq[counter - 2], sseq[counter - 1], sp)) {
+            /* reverse the sign and normalise */
+            f = -Math.abs(sp.coef[sp.ord]);
+
+            for (fp = sp.ord; fp >= 0; fp--) {
+                sp.coef[fp] /= f;
+            }
+            counter++;
+            sp = sseq[counter];
+        }
+
+        sp.coef[0] = -sp.coef[0]; /* reverse the sign */
+
+        return counter;
+    }
+}
+
+/*---------------------------------------------------------------------------
+ * numchanges
+ *
+ * return the number of sign changes in the Sturm sequence in
+ * sseq at the value a.
+ *--------------------------------------------------------------------------*/
+
+function numchanges(np, sseq, a) {
+    var changes = 0;
+
+    var lf = evalpoly(sseq[0].ord, sseq[0].coef, a);
+
+    for (var s = 1; s <= np; s++) {
+        var f = evalpoly(sseq[s].ord, sseq[s].coef, a);
+        if (lf == 0.0 || lf * f < 0) changes++;
+        lf = f;
+    }
+
+    return changes;
+}
+
+/*---------------------------------------------------------------------------
+ * numroots
+ *
+ * return the number of distinct real roots of the polynomial described in sseq.
+ *--------------------------------------------------------------------------*/
+
+function numroots(np, sseq, non_neg) {
+    var atposinf = 0;
+    var atneginf = 0;
+
+    /* changes at positive infinity */
+    var f = void 0;
+    var lf = sseq[0].coef[sseq[0].ord];
+
+    var s = 1;
+
+    for (s = 1; s <= np; s++) {
+        f = sseq[s].coef[sseq[s].ord];
+        if (lf == 0.0 || lf * f < 0) {
+            atposinf++;
+        }
+        lf = f;
+    }
+
+    // changes at negative infinity or zero
+    if (non_neg) {
+        atneginf = numchanges(np, sseq, 0.0);
+    } else {
+        if (sseq[0].ord & 1) lf = -sseq[0].coef[sseq[0].ord];else lf = sseq[0].coef[sseq[0].ord];
+
+        for (var _s = 1; _s <= np; _s++) {
+            if (sseq[_s].ord & 1) f = -sseq[_s].coef[sseq[_s].ord];else f = sseq[_s].coef[sseq[_s].ord];
+            if (lf == 0.0 || lf * f < 0) atneginf++;
+            lf = f;
+        }
+    }
+
+    return {
+        nroots: atneginf - atposinf,
+        atmin: atneginf,
+        atmax: atposinf
+    };
+}
+
+/*---------------------------------------------------------------------------
+ * sbisect
+ *
+ * uses a bisection based on the sturm sequence for the polynomial
+ * described in sseq to isolate intervals in which roots occur,
+ * the roots are returned in the roots array in order of magnitude.
+ *--------------------------------------------------------------------------*/
+
+function sbisect(np, sseq, min, max, atmin, atmax, roots, counter) {
+    var mid = void 0;
+    var atmid = void 0;
+    var its = void 0;
+    var n1 = 0,
+        n2 = 0;
+    var nroot = atmin - atmax;
+
+    if (nroot == 1) {
+
+        /* first try a less expensive technique.  */
+        if (modrf(sseq[0].ord, sseq[0].coef, min, max, roots, counter)) return 1;
+
+        /*
+        * if we get here we have to evaluate the root the hard
+        * way by using the Sturm sequence.
+        */
+        for (its = 0; its < MAXIT; its++) {
+            mid = double((min + max) / 2);
+            atmid = numchanges(np, sseq, mid);
+
+            if (Math.abs(mid) > RELERROR) {
+                if (Math.abs((max - min) / mid) < RELERROR) {
+                    roots[0] = mid;
+                    return 1;
+                }
+            } else if (Math.abs(max - min) < RELERROR) {
+                roots[0] = mid;
+                return 1;
+            }
+
+            if (atmin - atmid == 0) min = mid;else max = mid;
+        }
+
+        if (its == MAXIT) {
+            roots[0] = mid;
+        }
+
+        return 1;
+    }
+
+    /* more than one root in the interval, we have to bisect */
+    for (its = 0; its < MAXIT; its++) {
+
+        mid = (min + max) / 2;
+        atmid = numchanges(np, sseq, mid);
+
+        n1 = atmin - atmid;
+        n2 = atmid - atmax;
+
+        if (n1 != 0 && n2 != 0) {
+            sbisect(np, sseq, min, mid, atmin, atmid, roots, counter);
+            sbisect(np, sseq, mid, max, atmid, atmax, roots, counter + n1);
+            break;
+        }
+
+        if (n1 == 0) min = mid;else max = mid;
+    }
+
+    if (its == MAXIT) {
+        for (n1 = atmax; n1 < atmin; n1++) {
+            roots[n1 - atmax] = mid;
+        }
+    }
+
+    return 1;
+}
+
+function find_real_roots_sturm(p, order, roots, non_neg) {
+    /*
+    * finds the roots of the input polynomial.  They are returned in roots.
+    * It is assumed that roots is already allocated with space for the roots.
+    */
+    var sseq = [];
+    for (var temp = 0; temp < Maxdegree + 1; temp++) {
+        sseq.push(new poly());
+    }
+    var min = void 0,
+        max = void 0;
+    var i = void 0,
+        nchanges = void 0,
+        np = void 0;
+
+    // Copy the coefficients from the input p.  Normalize as we go
+    var norm = 1.0 / p[order];
+    for (i = 0; i <= order; i++) {
+        sseq[0].coef[i] = p[i] * norm;
+    } // Now, also normalize the other terms
+    var val0 = Math.abs(sseq[0].coef[0]);
+    var fac = 1.0; // This will be a factor for the roots
+    if (val0 > 10.0) {
+        // Do this in case there are zero roots
+        fac = Math.pow(val0, -1.0 / order);
+        var mult = fac;
+        for (var _i = order - 1; _i >= 0; _i--) {
+            sseq[0].coef[_i] *= mult;
+            mult = mult * fac;
+        }
+    }
+
+    /* build the Sturm sequence */
+    np = buildsturm(order, sseq);
+    // get the number of real roots
+
+    var _numroots = numroots(np, sseq, non_neg),
+        nroots = _numroots.nroots,
+        atmin = _numroots.atmin,
+        atmax = _numroots.atmax;
+
+    if (nroots == 0) {
+        return nroots;
+    }
+
+    /* calculate the bracket that the roots live in */
+    if (non_neg) min = 0.0;else {
+        min = -1.0;
+        nchanges = numchanges(np, sseq, min);
+        for (i = 0; nchanges != atmin && i != MAXPOW; i++) {
+            min *= 10.0;
+            nchanges = numchanges(np, sseq, min);
+        }
+
+        if (nchanges != atmin) {
+            atmin = nchanges;
+        }
+    }
+
+    max = 1.0;
+    nchanges = numchanges(np, sseq, max);
+    for (i = 0; nchanges != atmax && i != MAXPOW; i++) {
+        max *= 10.0;
+        nchanges = numchanges(np, sseq, max);
+    }
+
+    if (nchanges != atmax) {
+        atmax = nchanges;
+    }
+
+    nroots = atmin - atmax;
+
+    /* perform the bisection */
+    sbisect(np, sseq, min, max, atmin, atmax, roots, 0);
+
+    /* Finally, reorder the roots */
+    for (i = 0; i < nroots; i++) {
+        roots[i] /= fac;
+    }
+
+    return nroots;
+}
+
+exports.default = find_real_roots_sturm;
+
+/***/ }),
+/* 9 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -5990,9 +7644,14 @@ var ARDebugger = function () {
     }, {
         key: 'update',
         value: function update() {
-            if (!this.arView.transform) return;
+            if (!this.arView.pose) return;
             for (var i = 0; i < this.arView.transform.data.length; i++) {
-                this.debugWindow.innerHTML = this.arView.transform.data[i] + '\n';
+                this.debugWindow.innerHTML = 'Rotation X: ' + this.arView.pose.rotation.x + '\n';
+                this.debugWindow.innerHTML += 'Rotation Y: ' + this.arView.pose.rotation.y + '\n';
+                this.debugWindow.innerHTML += 'Rotation Z: ' + this.arView.pose.rotation.z + '\n';
+                this.debugWindow.innerHTML += 'Translation X: ' + this.arView.pose.translation.x + '\n';
+                this.debugWindow.innerHTML += 'Translation Y: ' + this.arView.pose.translation.y + '\n';
+                this.debugWindow.innerHTML += 'Translation Z: ' + this.arView.pose.translation.z + '\n';
             }
         }
     }]);
