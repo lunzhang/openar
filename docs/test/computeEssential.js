@@ -1,4 +1,4 @@
-const MAX_ITERATIONS = 100;
+const MAX_ITERATIONS = 1000;
 const MODEL_SIZE = 5;
 const PROBABILITY = 0.99;
 const focal = 800;

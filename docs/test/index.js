@@ -94,7 +94,7 @@ function detectAndTrackFeatures(canvas1Id, canvas2Id, frame1, frame2) {
 function calculateCameraPose(frame1Feat, frame2Feat, featuresCount, status) {
     var text = document.getElementById('camera-pose');
 
-    var essentialMatrix = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
+    const essentialMatrix = new jsfeat.matrix_t(3, 3, jsfeat.F32_t | jsfeat.C1_t);
 
     // removed none detected frames
     for (let i = 0; i < status.length; i++) {
@@ -106,14 +106,18 @@ function calculateCameraPose(frame1Feat, frame2Feat, featuresCount, status) {
         }
     }
 
-    computeEssential(frame1Feat, frame2Feat, status);
+    const eMatrix = computeEssential(frame1Feat, frame2Feat, status);
 
-    // text.innerHTML = 'Rotation X: ' + pose.rotation.x + '\n';
-    // text.innerHTML += 'Rotation Y: ' + pose.rotation.y + '\n';
-    // text.innerHTML += 'Rotation Z: ' + pose.rotation.z + '\n';
-    // text.innerHTML += 'Translation X: ' + pose.translation.x + '\n';
-    // text.innerHTML += 'Translation Y: ' + pose.translation.y + '\n';
-    // text.innerHTML += 'Translation Z: ' + pose.translation.z + '\n';
+    essentialMatrix.data = eMatrix[0].concat(eMatrix[1].concat(eMatrix[2]));
+
+    const pose = recoverPose(essentialMatrix);
+
+    text.innerHTML = 'Rotation X: ' + pose.rotation.x + '\n';
+    text.innerHTML += 'Rotation Y: ' + pose.rotation.y + '\n';
+    text.innerHTML += 'Rotation Z: ' + pose.rotation.z + '\n';
+    text.innerHTML += 'Translation X: ' + pose.translation.x + '\n';
+    text.innerHTML += 'Translation Y: ' + pose.translation.y + '\n';
+    text.innerHTML += 'Translation Z: ' + pose.translation.z + '\n';
 }
 
 // Draw image 2 first
