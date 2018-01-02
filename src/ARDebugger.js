@@ -18,9 +18,14 @@ export default class ARDebugger {
     }
 
     update() {
-        if(!this.arView.transform) return;
+        if(!this.arView.pose) return;
         for (let i = 0; i < this.arView.transform.data.length; i++) {
-            this.debugWindow.innerHTML = this.arView.transform.data[i] + '\n';
+            this.debugWindow.innerHTML = 'Rotation X: ' + this.arView.pose.rotation.x + '\n';
+            this.debugWindow.innerHTML += 'Rotation Y: ' + this.arView.pose.rotation.y + '\n';
+            this.debugWindow.innerHTML += 'Rotation Z: ' + this.arView.pose.rotation.z + '\n';
+            this.debugWindow.innerHTML += 'Translation X: ' + this.arView.pose.translation.x + '\n';
+            this.debugWindow.innerHTML += 'Translation Y: ' + this.arView.pose.translation.y + '\n';
+            this.debugWindow.innerHTML += 'Translation Z: ' + this.arView.pose.translation.z + '\n';
         }
     }
 }
