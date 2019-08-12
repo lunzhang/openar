@@ -12,11 +12,6 @@ module.exports = [{
     path: path.join(__dirname, "dist"),
     filename: "[name].js"
   },
-  module: {
-    loaders: [
-      { test: /\.js$/, loader: 'babel-loader', exclude: /node_modules/ },
-    ],
-  },
   devServer: {
     host: '0.0.0.0',
     publicPath: '/dist',
